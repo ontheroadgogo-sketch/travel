@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>여행 일정 기록</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --ink:#1E2433;
+    --ink-soft:#5B6472;
+    --bg:#F5F6F3;
+    --card:#FFFFFF;
+    --line:#E4E2D9;
+    --teal:#2B6E68;
+    --teal-soft:#DCEAE8;
+    --blue:#4A6FA5;
+    --blue-soft:#E1E8F1;
+    --clay:#C4703F;
+    --clay-soft:#F3E2D3;
+    --amber:#D98E3F;
+    --purple:#7C5CBF;
+    --purple-soft:#E9E2F6;
+    --shadow: 0 1px 2px rgba(30,36,51,0.06), 0 6px 18px rgba(30,36,51,0.06);
+    --radius: 16px;
+    --fs-base: clamp(14px, 1.4vw + 10px, 17px);
+  }
+  *{box-sizing:border-box;}
+  html{font-size:var(--fs-base);}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans KR', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding: clamp(14px,3vw,28px) clamp(14px,4vw,28px) 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    flex-direction:column;
+    gap:0.9em;
+    margin-bottom:1.4em;
+  }
+  .title-row{
+    display:flex;
+    align-items:center;
+    gap:0.5em;
+    flex-wrap:wrap;
+  }
+  .title-row h1{
+    font-family:'Noto Serif KR', serif;
+    font-weight:700;
+    font-size:1.9em;
+    margin:0;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .title-row .tag{
+    font-size:0.72em;
+    color:var(--teal);
+    background:var(--teal-soft);
+    padding:0.25em 0.7em;
+    border-radius:999px;
+    font-weight:600;
+  }
+  .title-row .spacer{ flex:1; }
+  .header-btn{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:0.3em;
+    font-family:inherit;
+    font-size:0.78em;
+    font-weight:700;
+    padding:0.5em 0.75em;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .header-btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .period-box{
+    display:flex;
+    align-items:center;
+    gap:0.6em;
+    flex-wrap:wrap;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius: 14px;
+    padding: 0.8em 1em;
+    box-shadow:var(--shadow);
+  }
+  .period-box label{
+    font-size:0.82em;
+    color:var(--ink-soft);
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .period-box input[type=date]{
+    font-family:inherit;
+    font-size:0.9em;
+    padding:0.4em 0.5em;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:#fff;
+    color:var(--ink);
+    min-width:0;
+    flex:1 1 130px;
+  }
+  .period-box .dash{ color:var(--ink-soft); }
+
+  /* ---------- Day tabs (signature: boarding-pass chips) ---------- */
+  .day-tabs{
+    display:flex;
+    gap:0.5em;
+    overflow-x:auto;
+    padding: 0.6em 0.1em 0.9em;
+    margin-bottom:0.2em;
+    scrollbar-width:thin;
+  }
+  .day-tabs::-webkit-scrollbar{height:5px;}
+  .day-tabs::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+  .day-chip{
+    position:relative;
+    flex:0 0 auto;
+    font-family:'Noto Sans KR',sans-serif;
+    font-weight:600;
+    font-size:0.85em;
+    padding:0.55em 1em;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .day-chip .sub{
+    display:block;
+    font-size:0.72em;
+    font-weight:500;
+    opacity:0.75;
+    margin-top:0.1em;
+  }
+  .day-chip.active{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:#fff;
+  }
+  .day-chip.active .sub{ color:#e8e8e4; }
+  .day-chip:not(.active):hover{ border-color:var(--teal); color:var(--teal); }
+
+  /* ---------- Category filters ---------- */
+  .cat-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5em;
+    margin-bottom:1em;
+  }
+  .cat-btn{
+    flex:1 1 18%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.35em;
+    font-family:inherit;
+    font-size:0.85em;
+    font-weight:600;
+    padding:0.6em 0.4em;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .cat-btn.active[data-cat="all"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .cat-btn.active[data-cat="place"]{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .cat-btn.active[data-cat="move"]{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .cat-btn.active[data-cat="meal"]{ background:var(--clay); border-color:var(--clay); color:#fff; }
+  .cat-btn.active[data-cat="hotel"]{ background:var(--purple); border-color:var(--purple); color:#fff; }
+
+  /* ---------- Add button ---------- */
+  .add-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.4em;
+    width:100%;
+    padding:0.85em;
+    border-radius:14px;
+    border:1.5px dashed var(--teal);
+    background:var(--teal-soft);
+    color:var(--teal);
+    font-family:inherit;
+    font-weight:700;
+    font-size:0.95em;
+    cursor:pointer;
+    margin-bottom:1.5em;
+    transition:all .15s ease;
+  }
+  .add-btn:hover{ background:var(--teal); color:#fff; }
+
+  /* ---------- Cards ---------- */
+  .card-list{ display:flex; flex-direction:column; gap:0.9em; }
+  .empty-state{
+    text-align:center;
+    color:var(--ink-soft);
+    padding:3em 1em;
+    font-size:0.9em;
+    line-height:1.7;
+  }
+  .card{
+    position:relative;
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    border:1px solid var(--line);
+    padding:1.1em 1.2em 1em;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:6px;
+  }
+  .card.place::before{ background:var(--teal); }
+  .card.move::before{ background:var(--blue); }
+  .card.meal::before{ background:var(--clay); }
+  .card.hotel::before{ background:var(--purple); }
+
+  .card-head{
+    display:flex;
+    align-items:flex-start;
+    gap:0.6em;
+    margin-bottom:0.5em;
+  }
+  .badge{
+    flex:0 0 auto;
+    width:2.1em; height:2.1em;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1em;
+  }
+  .card.place .badge{ background:var(--teal-soft); }
+  .card.move .badge{ background:var(--blue-soft); }
+  .card.meal .badge{ background:var(--clay-soft); }
+  .card.hotel .badge{ background:var(--purple-soft); }
+
+  .card-titlebox{ flex:1; min-width:0; }
+  .card-titlebox h3{
+    margin:0;
+    font-size:1.05em;
+    font-weight:700;
+    color:var(--ink);
+    word-break:break-word;
+  }
+  .card-titlebox .datetime{
+    margin-top:0.2em;
+    font-size:0.78em;
+    color:var(--ink-soft);
+    font-weight:500;
+  }
+  .card-actions-edit{
+    display:flex; gap:0.15em; flex:0 0 auto; align-items:center;
+  }
+  .icon-btn{
+    border:none; background:transparent; color:var(--ink-soft);
+    cursor:pointer; font-size:1em; padding:0.2em;
+    border-radius:6px; line-height:1;
+  }
+  .icon-btn:hover{ background:var(--bg); color:var(--ink); }
+  .drag-handle{
+    border:none; background:transparent; color:var(--ink-soft);
+    cursor:grab; font-size:1.1em; padding:0.2em 0.3em;
+    border-radius:6px; line-height:1; touch-action:none;
+    user-select:none;
+  }
+  .drag-handle:active{ cursor:grabbing; }
+  .drag-handle:hover{ background:var(--bg); color:var(--ink); }
+  .card.dragging{
+    opacity:0.55;
+    box-shadow: 0 8px 24px rgba(30,36,51,0.18);
+    z-index:5;
+  }
+
+  .memo{
+    font-size:0.88em;
+    line-height:1.65;
+    color:#333A47;
+    white-space:pre-wrap;
+    word-break:break-word;
+    margin: 0.4em 0 0.9em;
+  }
+  .memo:empty{ display:none; }
+
+  .card-links{
+    display:flex;
+    justify-content:flex-end;
+    gap:0.4em;
+    border-top:1px dashed var(--line);
+    padding-top:0.7em;
+  }
+  .link-btn{
+    display:flex; align-items:center; gap:0.3em;
+    font-size:0.76em;
+    font-weight:600;
+    padding:0.4em 0.7em;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink-soft);
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .link-btn:hover{ border-color:var(--teal); color:var(--teal); }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,24,32,0.45);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:50;
+    padding:0;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:#fff;
+    width:100%;
+    max-width:520px;
+    max-height:92vh;
+    overflow-y:auto;
+    border-radius: 20px 20px 0 0;
+    padding: 1.4em 1.3em calc(1.4em + env(safe-area-inset-bottom));
+    animation: slideup .2s ease;
+  }
+  @media (min-width:640px){
+    .overlay{ align-items:center; }
+    .modal{ border-radius:20px; max-height:88vh; }
+  }
+  @keyframes slideup{ from{ transform:translateY(20px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+  .modal h2{
+    font-family:'Noto Serif KR', serif;
+    font-size:1.25em;
+    margin:0 0 0.8em;
+  }
+  .field{ margin-bottom:1em; }
+  .field label{
+    display:block;
+    font-size:0.8em;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:0.4em;
+  }
+  .cat-select{ display:flex; gap:0.5em; }
+  .cat-opt{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:0.2em;
+    padding:0.6em 0.3em;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+    font-size:0.8em;
+    font-weight:600;
+    color:var(--ink-soft);
+  }
+  .cat-opt .emo{ font-size:1.3em; }
+  .cat-opt.sel[data-cat="place"]{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal); }
+  .cat-opt.sel[data-cat="move"]{ border-color:var(--blue); background:var(--blue-soft); color:var(--blue); }
+  .cat-opt.sel[data-cat="meal"]{ border-color:var(--clay); background:var(--clay-soft); color:var(--clay); }
+  .cat-opt.sel[data-cat="hotel"]{ border-color:var(--purple); background:var(--purple-soft); color:var(--purple); }
+
+  input[type=text], input[type=date], input[type=time]{
+    width:100%;
+    font-family:inherit;
+    font-size:0.95em;
+    padding:0.65em 0.75em;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fbfbf9;
+    color:var(--ink);
+  }
+  input:focus, textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+  .time-row{ display:flex; align-items:center; gap:0.5em; }
+  .time-row input{ flex:1; min-width:0; }
+  .time-row .to{ color:var(--ink-soft); font-size:0.85em; }
+
+  .memo-toolbar{ display:flex; gap:0.4em; margin-bottom:0.4em; }
+  .tool-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    border-radius:7px;
+    padding:0.3em 0.65em;
+    font-size:0.8em;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .tool-btn.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  textarea#memoInput{
+    width:100%;
+    min-height:6.5em;
+    font-family:inherit;
+    font-size:0.9em;
+    line-height:1.6;
+    padding:0.7em 0.8em;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fbfbf9;
+    color:var(--ink);
+    resize:vertical;
+  }
+  .hint{ font-size:0.72em; color:var(--ink-soft); margin-top:0.35em; }
+
+  .link-field-row{ display:flex; gap:0.4em; align-items:center; }
+  .link-field-row input{ flex:1; min-width:0; font-size:0.85em; }
+  .autofill-btn{
+    flex:0 0 auto;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    border-radius:8px;
+    padding:0.6em 0.6em;
+    font-size:0.78em;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .autofill-btn:hover{ border-color:var(--teal); color:var(--teal); }
+
+  .modal-actions{
+    display:flex; gap:0.6em; margin-top:1.2em;
+  }
+  .btn{
+    flex:1;
+    padding:0.8em;
+    border-radius:12px;
+    border:none;
+    font-family:inherit;
+    font-weight:700;
+    font-size:0.92em;
+    cursor:pointer;
+  }
+  .btn.primary{ background:var(--teal); color:#fff; }
+  .btn.ghost{ background:var(--bg); color:var(--ink-soft); }
+  .btn.danger{ background:#fdeceb; color:#B3402F; }
+
+  /* ---------- Checklist ---------- */
+  .checklist-add-row{ display:flex; gap:0.5em; margin-bottom:1em; }
+  .checklist-add-row input{ flex:1; min-width:0; }
+  .checklist-add-row button{
+    flex:0 0 auto;
+    background:var(--teal); color:#fff; border:none;
+    border-radius:10px; padding:0 1em; font-weight:700; cursor:pointer;
+  }
+  .checklist-list{ display:flex; flex-direction:column; gap:0.4em; max-height:50vh; overflow-y:auto; }
+  .checklist-row{
+    display:flex; align-items:center; gap:0.6em;
+    padding:0.6em 0.7em;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#fbfbf9;
+  }
+  .checklist-row input[type=checkbox]{
+    width:1.2em; height:1.2em; flex:0 0 auto; accent-color:var(--teal); cursor:pointer;
+  }
+  .checklist-row .ct-text{ flex:1; min-width:0; font-size:0.92em; word-break:break-word; }
+  .checklist-row.done .ct-text{ text-decoration:line-through; color:var(--ink-soft); }
+  .checklist-row .ct-del{
+    flex:0 0 auto; border:none; background:transparent; color:var(--ink-soft);
+    cursor:pointer; font-size:1em; padding:0.2em;
+  }
+  .checklist-row .ct-del:hover{ color:#B3402F; }
+  .checklist-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:2em 1em; }
+
+  /* ---------- Storage(PDF) ---------- */
+  .storage-back-row{ display:flex; align-items:center; gap:0.4em; }
+  .upload-row{ margin-bottom:1em; }
+  .upload-label{
+    display:flex; align-items:center; justify-content:center; gap:0.4em;
+    padding:0.9em; border-radius:12px;
+    border:1.5px dashed var(--purple);
+    background:var(--purple-soft);
+    color:var(--purple);
+    font-weight:700; font-size:0.92em;
+    cursor:pointer;
+  }
+  .upload-label:hover{ background:var(--purple); color:#fff; }
+
+  .folder-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(118px, 1fr));
+    gap:0.7em;
+    margin-top:0.3em;
+  }
+  .folder-card{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.1em 0.6em 0.8em;
+    text-align:center;
+    background:#fbfbf9;
+    cursor:pointer;
+    transition:border-color .15s ease;
+  }
+  .folder-card:hover{ border-color:var(--purple); }
+  .folder-card .folder-icon{ font-size:2em; }
+  .folder-card .folder-card-name{
+    font-size:0.85em; font-weight:700; margin-top:0.35em;
+    word-break:break-word; color:var(--ink);
+  }
+  .folder-card .folder-card-count{
+    font-size:0.72em; color:var(--ink-soft); margin-top:0.15em;
+  }
+  .folder-card .folder-del{
+    position:absolute; top:0.35em; right:0.35em;
+    background:transparent; border:none; color:var(--ink-soft);
+    font-size:0.85em; cursor:pointer; padding:0.2em; border-radius:6px;
+  }
+  .folder-card .folder-del:hover{ color:#B3402F; background:var(--bg); }
+
+  .folder-view-header{
+    display:flex; align-items:center; gap:0.35em;
+    margin-bottom:0.9em;
+  }
+  .folder-view-header .folder-name-box{
+    flex:1; min-width:0;
+    font-weight:700; font-size:1.05em;
+    word-break:break-word;
+  }
+  .folder-view-header input{
+    flex:1; min-width:0; font-size:0.9em; padding:0.45em 0.6em;
+  }
+  .folder-view-header .icon-btn{ font-size:1em; }
+
+  .file-gallery{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(102px, 1fr));
+    gap:0.7em;
+  }
+  .file-card{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    background:#fff;
+    cursor:pointer;
+  }
+  .file-card .thumb-wrap{
+    width:100%; aspect-ratio:3/4;
+    background:#EDEBE3;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .file-card .thumb-wrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .file-card .thumb-fallback{ font-size:2em; color:var(--ink-soft); }
+  .file-card .file-name{
+    font-size:0.7em; padding:0.4em 0.5em; line-height:1.3;
+    word-break:break-word; color:var(--ink);
+  }
+  .file-card .file-del{
+    position:absolute; top:0.3em; right:0.3em;
+    background:rgba(30,36,51,0.55); color:#fff;
+    border:none; border-radius:50%;
+    width:1.6em; height:1.6em; font-size:0.75em;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .file-card .file-del:hover{ background:#B3402F; }
+  .checklist-empty, .file-empty, .folder-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:2em 1em; }
+
+  /* ---------- Print ---------- */
+  @media print{
+    header, .cat-row, .add-btn, .day-tabs, .card-actions-edit, .card-links, .header-btn, .overlay{ display:none !important; }
+    body{ background:#fff; }
+    .wrap{ padding:0; max-width:100%; }
+    .card{ box-shadow:none; border:1px solid #ccc; break-inside:avoid; margin-bottom:10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="title-row">
+      <h1>일정</h1>
+      <span class="tag">여행 일정 기록</span>
+      <div class="spacer"></div>
+      <button class="header-btn" id="openChecklistBtn">✅ 체크리스트</button>
+      <button class="header-btn" id="openStorageBtn">📁 보관함</button>
+      <button class="header-btn" id="openDriveBtn">☁️ 드라이브</button>
+    </div>
+    <div class="period-box">
+      <label>여행 기간</label>
+      <input type="date" id="tripStart">
+      <span class="dash">~</span>
+      <input type="date" id="tripEnd">
+    </div>
+  </header>
+
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <div class="cat-row" id="catRow">
+    <button class="cat-btn active" data-cat="all">전체</button>
+    <button class="cat-btn" data-cat="place">📍 장소</button>
+    <button class="cat-btn" data-cat="move">🚗 이동</button>
+    <button class="cat-btn" data-cat="meal">🍽️ 식사</button>
+    <button class="cat-btn" data-cat="hotel">🏨 호텔</button>
+  </div>
+
+  <button class="add-btn" id="openAddBtn">＋ 일정 추가</button>
+
+  <div class="card-list" id="cardList"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">일정 추가</h2>
+
+    <div class="field">
+      <label>카테고리</label>
+      <div class="cat-select" id="catSelect">
+        <div class="cat-opt sel" data-cat="place"><span class="emo">📍</span>장소</div>
+        <div class="cat-opt" data-cat="move"><span class="emo">🚗</span>이동</div>
+        <div class="cat-opt" data-cat="meal"><span class="emo">🍽️</span>식사</div>
+        <div class="cat-opt" data-cat="hotel"><span class="emo">🏨</span>호텔</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="titleInput" placeholder="예: 에펠탑, 나리타 공항 이동, 라멘 맛집">
+    </div>
+
+    <div class="field">
+      <label>날짜</label>
+      <input type="date" id="dateInput">
+    </div>
+
+    <div class="field">
+      <label>시간</label>
+      <div class="time-row">
+        <input type="time" id="startTimeInput">
+        <span class="to">~</span>
+        <input type="time" id="endTimeInput">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>지도 링크 <span style="font-weight:400;">(선택, 비워두면 제목으로 자동 생성)</span></label>
+      <div class="link-field-row">
+        <input type="text" id="mapUrlInput" placeholder="https://maps.google.com/...">
+        <button type="button" class="autofill-btn" id="mapAutofillBtn">🔗 자동생성</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>길찾기 링크 <span style="font-weight:400;">(선택, 비워두면 제목으로 자동 생성)</span></label>
+      <div class="link-field-row">
+        <input type="text" id="dirUrlInput" placeholder="https://maps.google.com/dir/...">
+        <button type="button" class="autofill-btn" id="dirAutofillBtn">🔗 자동생성</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>메모</label>
+      <div class="memo-toolbar">
+        <button type="button" class="tool-btn" id="boldBtn">B 굵게</button>
+      </div>
+      <textarea id="memoInput" placeholder="메모를 입력하세요. 글자 수 제한 없음."></textarea>
+      <div class="hint">굵게 할 부분을 드래그(선택)한 뒤 'B 굵게' 버튼을 누르세요.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn danger" id="deleteBtn" style="display:none;">삭제</button>
+      <button class="btn ghost" id="cancelBtn">취소</button>
+      <button class="btn primary" id="saveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="checklistOverlay">
+  <div class="modal">
+    <h2>✅ 여행 준비물 체크리스트</h2>
+    <div class="checklist-add-row">
+      <input type="text" id="checklistInput" placeholder="예: 여권, 충전기, 우산">
+      <button id="checklistAddBtn">추가</button>
+    </div>
+    <div class="checklist-list" id="checklistList"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="checklistCloseBtn">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="storageOverlay">
+  <div class="modal">
+    <h2>📁 PDF 보관함</h2>
+
+    <div id="folderListView">
+      <div class="checklist-add-row">
+        <input type="text" id="folderNameInput" placeholder="새 폴더 이름 (예: 항공권, 숙소 예약서)">
+        <button id="folderAddBtn">만들기</button>
+      </div>
+      <div class="folder-grid" id="folderGrid"></div>
+    </div>
+
+    <div id="fileGalleryView" style="display:none;">
+      <div class="folder-view-header">
+        <button class="icon-btn" id="storageBackBtn" title="폴더 목록으로">←</button>
+        <div class="folder-name-box" id="folderNameBox"></div>
+        <button class="icon-btn" id="folderEditBtn" title="이름 변경">✏️</button>
+        <button class="icon-btn" id="folderDeleteBtn" title="폴더 삭제">🗑️</button>
+      </div>
+      <div class="upload-row">
+        <label class="upload-label" for="pdfUploadInput">＋ PDF 파일 업로드</label>
+        <input type="file" id="pdfUploadInput" accept="application/pdf" multiple style="display:none;">
+        <div class="hint">업로드하면 첫 페이지가 미리보기 이미지로 보여져요.</div>
+      </div>
+      <div class="file-gallery" id="fileGallery"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="storageCloseBtn">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="driveOverlay">
+  <div class="modal">
+    <h2>☁️ 구글 드라이브 백업</h2>
+    <div class="hint" id="driveStatus" style="margin-bottom:1em;">아직 연결되지 않았어요.</div>
+
+    <div class="modal-actions" id="driveLoginRow">
+      <button class="btn primary" id="driveLoginBtn">구글 계정으로 연결</button>
+    </div>
+
+    <div id="driveActions" style="display:none;">
+      <div class="modal-actions">
+        <button class="btn primary" id="driveSaveBtn">☁️ 지금 드라이브에 저장</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="driveLoadBtn">⬇️ 드라이브에서 불러오기</button>
+      </div>
+    </div>
+
+    <div class="hint">일정·체크리스트·PDF를 하나의 백업 파일로 드라이브에 저장해요. 다른 기기에서도 같은 구글 계정으로 연결해 '불러오기'하면 데이터를 가져올 수 있어요. 로그인은 브라우저를 새로고침하면 다시 해야 해요.</div>
+
+    <div class="modal-actions" style="margin-top:1em;">
+      <button class="btn ghost" id="driveCloseBtn">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'travelDiaryData_v1';
+
+  // ⚠️ 구글 클라우드 콘솔에서 발급받은 OAuth 클라이언트 ID로 아래 값을 바꿔주세요.
+  // (설정 방법: console.cloud.google.com → 사용자 인증 정보 → OAuth 클라이언트 ID)
+  const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+  const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  const DRIVE_BACKUP_FILENAME = 'travel-diary-backup.json';
+
+  let state = load();
+  let selectedDay = 'all';
+  let selectedCat = 'all';
+  let editingId = null;
+  let modalCat = 'place';
+
+  function load(){
+    let s = null;
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) s = JSON.parse(raw);
+    }catch(e){}
+    if(!s) s = { tripStart:'', tripEnd:'', items:[] };
+    if(!s.checklist) s.checklist = [];
+    if(!s.files) s.files = [];
+    if(!s.folders) s.folders = [];
+    return s;
+  }
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return true;
+    }catch(e){
+      alert('저장 공간이 부족해요. PDF 파일 용량이 너무 크거나 개수가 많을 수 있어요. 일부 파일을 삭제한 뒤 다시 시도해주세요.');
+      return false;
+    }
+  }
+
+  const tripStartEl = document.getElementById('tripStart');
+  const tripEndEl = document.getElementById('tripEnd');
+  tripStartEl.value = state.tripStart || '';
+  tripEndEl.value = state.tripEnd || '';
+
+  tripStartEl.addEventListener('change', ()=>{ state.tripStart = tripStartEl.value; selectedDay='all'; save(); renderAll(); });
+  tripEndEl.addEventListener('change', ()=>{ state.tripEnd = tripEndEl.value; selectedDay='all'; save(); renderAll(); });
+
+  function getDaysArray(){
+    if(!state.tripStart || !state.tripEnd) return [];
+    const days = [];
+    let d = new Date(state.tripStart + 'T00:00:00');
+    const end = new Date(state.tripEnd + 'T00:00:00');
+    if(d > end) return [];
+    while(d <= end){
+      days.push(d.toISOString().slice(0,10));
+      d.setDate(d.getDate()+1);
+    }
+    return days;
+  }
+
+  function fmtLabel(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return (d.getMonth()+1) + '/' + d.getDate();
+  }
+  const WEEKDAYS = ['일','월','화','수','목','금','토'];
+  function fmtWeekday(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return WEEKDAYS[d.getDay()];
+  }
+
+  function renderDayTabs(){
+    const wrap = document.getElementById('dayTabs');
+    const days = getDaysArray();
+    let html = `<div class="day-chip ${selectedDay==='all'?'active':''}" data-day="all">전체<span class="sub">${state.items.length}건</span></div>`;
+    days.forEach(d=>{
+      const count = state.items.filter(it=>it.date===d).length;
+      html += `<div class="day-chip ${selectedDay===d?'active':''}" data-day="${d}">${fmtLabel(d)}<span class="sub">${fmtWeekday(d)}${count?(' · '+count):''}</span></div>`;
+    });
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.day-chip').forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        selectedDay = chip.dataset.day;
+        renderAll();
+      });
+    });
+  }
+
+  document.getElementById('catRow').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.cat-btn');
+    if(!btn) return;
+    selectedCat = btn.dataset.cat;
+    renderAll();
+  });
+
+  function renderCatRow(){
+    document.querySelectorAll('.cat-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.cat === selectedCat);
+    });
+  }
+
+  const CAT_META = {
+    place:{emo:'📍', label:'장소'},
+    move:{emo:'🚗', label:'이동'},
+    meal:{emo:'🍽️', label:'식사'},
+    hotel:{emo:'🏨', label:'호텔'}
+  };
+
+  function escapeHtml(str){
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function renderMemo(raw){
+    if(!raw) return '';
+    let escaped = escapeHtml(raw);
+    escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    return escaped;
+  }
+
+  function renderCards(){
+    const list = document.getElementById('cardList');
+    let items = state.items.slice();
+    if(selectedDay !== 'all') items = items.filter(it=>it.date === selectedDay);
+    if(selectedCat !== 'all') items = items.filter(it=>it.category === selectedCat);
+    items.sort((a,b)=> (a.order||0) - (b.order||0));
+
+    if(items.length === 0){
+      list.innerHTML = `<div class="empty-state">아직 등록된 일정이 없어요.<br>‘＋ 일정 추가’ 버튼으로 첫 일정을 기록해보세요.</div>`;
+      return;
+    }
+
+    list.innerHTML = items.map(it=>{
+      const meta = CAT_META[it.category] || CAT_META.place;
+      const dateLabel = it.date ? `${fmtLabel(it.date)} (${fmtWeekday(it.date)})` : '';
+      const timeLabel = (it.startTime || it.endTime) ? `${it.startTime||''}${it.endTime? ' ~ '+it.endTime : ''}` : '';
+      const dt = [dateLabel, timeLabel].filter(Boolean).join(' · ');
+      const q = encodeURIComponent(it.title || '');
+      const mapHref = it.mapUrl ? escapeHtml(it.mapUrl) : `https://www.google.com/maps/search/?api=1&query=${q}`;
+      const dirHref = it.dirUrl ? escapeHtml(it.dirUrl) : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+      return `
+      <div class="card ${it.category}" data-id="${it.id}">
+        <div class="card-head">
+          <div class="badge">${meta.emo}</div>
+          <div class="card-titlebox">
+            <h3>${escapeHtml(it.title || '(제목 없음)')}</h3>
+            <div class="datetime">${dt}</div>
+          </div>
+          <div class="card-actions-edit">
+            <button class="drag-handle" title="드래그해서 순서 변경">⠿⠿</button>
+            <button class="icon-btn edit-btn" title="수정">✏️</button>
+          </div>
+        </div>
+        <div class="memo">${renderMemo(it.memo)}</div>
+        <div class="card-links">
+          <a class="link-btn" href="${mapHref}" target="_blank" rel="noopener">🗺️ 지도</a>
+          <a class="link-btn" href="${dirHref}" target="_blank" rel="noopener">🧭 길찾기</a>
+          <button class="link-btn print-btn">🖨️ PDF 저장</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('.edit-btn').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        const id = e.target.closest('.card').dataset.id;
+        openModal(state.items.find(it=>it.id===id));
+      });
+    });
+    list.querySelectorAll('.print-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{ window.print(); });
+    });
+    list.querySelectorAll('.drag-handle').forEach(h=>{
+      h.addEventListener('pointerdown', onDragHandleDown);
+    });
+  }
+
+  // ---------- Drag & drop reordering ----------
+  let dragState = null;
+
+  function onDragHandleDown(e){
+    e.preventDefault();
+    const card = e.target.closest('.card');
+    if(!card) return;
+    dragState = { id: card.dataset.id, cardEl: card };
+    card.classList.add('dragging');
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+  }
+
+  function onDragMove(e){
+    if(!dragState) return;
+    const list = document.getElementById('cardList');
+    const siblings = [...list.querySelectorAll('.card:not(.dragging)')];
+    const y = e.clientY;
+    let target = null;
+    for(const sib of siblings){
+      const rect = sib.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if(y < mid){ target = sib; break; }
+    }
+    if(target){
+      list.insertBefore(dragState.cardEl, target);
+    } else {
+      list.appendChild(dragState.cardEl);
+    }
+  }
+
+  function onDragEnd(){
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    if(!dragState) return;
+    dragState.cardEl.classList.remove('dragging');
+
+    const list = document.getElementById('cardList');
+    const cardsNow = [...list.querySelectorAll('.card')];
+    const idx = cardsNow.indexOf(dragState.cardEl);
+    const prevEl = cardsNow[idx - 1];
+    const nextEl = cardsNow[idx + 1];
+    const item = state.items.find(it => it.id === dragState.id);
+    const prevItem = prevEl ? state.items.find(it => it.id === prevEl.dataset.id) : null;
+    const nextItem = nextEl ? state.items.find(it => it.id === nextEl.dataset.id) : null;
+
+    if(item){
+      if(prevItem && nextItem) item.order = (prevItem.order + nextItem.order) / 2;
+      else if(!prevItem && nextItem) item.order = nextItem.order - 1000;
+      else if(prevItem && !nextItem) item.order = prevItem.order + 1000;
+      save();
+    }
+    dragState = null;
+    renderCards();
+  }
+
+  function renderAll(){
+    renderDayTabs();
+    renderCatRow();
+    renderCards();
+  }
+
+  // ---------- Modal ----------
+  const overlay = document.getElementById('overlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const catSelect = document.getElementById('catSelect');
+  const titleInput = document.getElementById('titleInput');
+  const dateInput = document.getElementById('dateInput');
+  const startTimeInput = document.getElementById('startTimeInput');
+  const endTimeInput = document.getElementById('endTimeInput');
+  const memoInput = document.getElementById('memoInput');
+  const boldBtn = document.getElementById('boldBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+  const mapUrlInput = document.getElementById('mapUrlInput');
+  const dirUrlInput = document.getElementById('dirUrlInput');
+
+  function openModal(item){
+    editingId = item ? item.id : null;
+    modalTitle.textContent = item ? '일정 수정' : '일정 추가';
+    modalCat = item ? item.category : 'place';
+    setCatSelect(modalCat);
+    titleInput.value = item ? item.title : '';
+    dateInput.value = item ? item.date : (selectedDay !== 'all' ? selectedDay : (state.tripStart || ''));
+    startTimeInput.value = item ? (item.startTime||'') : '';
+    endTimeInput.value = item ? (item.endTime||'') : '';
+    memoInput.value = item ? (item.memo||'') : '';
+    mapUrlInput.value = item ? (item.mapUrl||'') : '';
+    dirUrlInput.value = item ? (item.dirUrl||'') : '';
+    deleteBtn.style.display = item ? 'block' : 'none';
+    overlay.classList.add('open');
+  }
+
+  function autoMapUrl(){
+    const q = encodeURIComponent(titleInput.value.trim());
+    return q ? `https://www.google.com/maps/search/?api=1&query=${q}` : '';
+  }
+  function autoDirUrl(){
+    const q = encodeURIComponent(titleInput.value.trim());
+    return q ? `https://www.google.com/maps/dir/?api=1&destination=${q}` : '';
+  }
+  document.getElementById('mapAutofillBtn').addEventListener('click', ()=>{
+    const url = autoMapUrl();
+    if(url) mapUrlInput.value = url; else titleInput.focus();
+  });
+  document.getElementById('dirAutofillBtn').addEventListener('click', ()=>{
+    const url = autoDirUrl();
+    if(url) dirUrlInput.value = url; else titleInput.focus();
+  });
+  function closeModal(){
+    overlay.classList.remove('open');
+  }
+  function setCatSelect(cat){
+    modalCat = cat;
+    catSelect.querySelectorAll('.cat-opt').forEach(o=>{
+      o.classList.toggle('sel', o.dataset.cat === cat);
+    });
+  }
+  catSelect.addEventListener('click', (e)=>{
+    const opt = e.target.closest('.cat-opt');
+    if(!opt) return;
+    setCatSelect(opt.dataset.cat);
+  });
+
+  document.getElementById('openAddBtn').addEventListener('click', ()=> openModal(null));
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+
+  boldBtn.addEventListener('click', ()=>{
+    const start = memoInput.selectionStart;
+    const end = memoInput.selectionEnd;
+    const val = memoInput.value;
+    if(start === end){ return; } // need a selection
+    const selected = val.slice(start, end);
+    const before = val.slice(0, start);
+    const after = val.slice(end);
+    let newVal, newStart, newEnd;
+    if(selected.startsWith('**') && selected.endsWith('**') && selected.length >= 4){
+      const stripped = selected.slice(2, -2);
+      newVal = before + stripped + after;
+      newStart = start; newEnd = start + stripped.length;
+    } else {
+      newVal = before + '**' + selected + '**' + after;
+      newStart = start; newEnd = end + 4;
+    }
+    memoInput.value = newVal;
+    memoInput.focus();
+    memoInput.setSelectionRange(newStart, newEnd);
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', ()=>{
+    const title = titleInput.value.trim();
+    if(!title){ titleInput.focus(); return; }
+    if(!dateInput.value){ dateInput.focus(); return; }
+    const existing = editingId ? state.items.find(it=>it.id===editingId) : null;
+    const order = existing ? existing.order
+      : (dateInput.value ? new Date(dateInput.value + 'T' + (startTimeInput.value || '00:00')).getTime() : Date.now());
+    const data = {
+      id: editingId || ('it_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)),
+      category: modalCat,
+      title: title,
+      date: dateInput.value,
+      startTime: startTimeInput.value,
+      endTime: endTimeInput.value,
+      memo: memoInput.value,
+      mapUrl: mapUrlInput.value.trim(),
+      dirUrl: dirUrlInput.value.trim(),
+      order: order
+    };
+    if(editingId){
+      const idx = state.items.findIndex(it=>it.id===editingId);
+      if(idx>-1) state.items[idx] = data;
+    } else {
+      state.items.push(data);
+    }
+    save();
+    closeModal();
+    renderAll();
+  });
+
+  deleteBtn.addEventListener('click', ()=>{
+    if(!editingId) return;
+    if(!confirm('이 일정을 삭제할까요?')) return;
+    state.items = state.items.filter(it=>it.id !== editingId);
+    save();
+    closeModal();
+    renderAll();
+  });
+
+  // ---------- Checklist ----------
+  const checklistOverlay = document.getElementById('checklistOverlay');
+  const checklistInput = document.getElementById('checklistInput');
+  const checklistList = document.getElementById('checklistList');
+
+  function renderChecklist(){
+    if(state.checklist.length === 0){
+      checklistList.innerHTML = `<div class="checklist-empty">아직 등록된 준비물이 없어요. 위에서 추가해보세요.</div>`;
+      return;
+    }
+    checklistList.innerHTML = state.checklist.map(ct => `
+      <div class="checklist-row ${ct.done ? 'done' : ''}" data-id="${ct.id}">
+        <input type="checkbox" class="ct-check" ${ct.done ? 'checked' : ''}>
+        <div class="ct-text">${escapeHtml(ct.text)}</div>
+        <button class="ct-del" title="삭제">🗑️</button>
+      </div>`).join('');
+
+    checklistList.querySelectorAll('.ct-check').forEach(cb=>{
+      cb.addEventListener('change', (e)=>{
+        const id = e.target.closest('.checklist-row').dataset.id;
+        const item = state.checklist.find(c=>c.id===id);
+        if(item){ item.done = e.target.checked; save(); renderChecklist(); }
+      });
+    });
+    checklistList.querySelectorAll('.ct-del').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const id = e.target.closest('.checklist-row').dataset.id;
+        state.checklist = state.checklist.filter(c=>c.id!==id);
+        save(); renderChecklist();
+      });
+    });
+  }
+
+  function addChecklistItem(){
+    const text = checklistInput.value.trim();
+    if(!text) return;
+    state.checklist.push({ id:'ck_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text, done:false });
+    checklistInput.value = '';
+    save();
+    renderChecklist();
+    checklistInput.focus();
+  }
+  document.getElementById('checklistAddBtn').addEventListener('click', addChecklistItem);
+  checklistInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') addChecklistItem(); });
+
+  document.getElementById('openChecklistBtn').addEventListener('click', ()=>{
+    renderChecklist();
+    checklistOverlay.classList.add('open');
+  });
+  document.getElementById('checklistCloseBtn').addEventListener('click', ()=> checklistOverlay.classList.remove('open'));
+  checklistOverlay.addEventListener('click', (e)=>{ if(e.target === checklistOverlay) checklistOverlay.classList.remove('open'); });
+
+  // ---------- PDF storage (folders + previews) ----------
+  const storageOverlay = document.getElementById('storageOverlay');
+  const pdfUploadInput = document.getElementById('pdfUploadInput');
+  const folderListView = document.getElementById('folderListView');
+  const fileGalleryView = document.getElementById('fileGalleryView');
+  const folderGrid = document.getElementById('folderGrid');
+  const fileGallery = document.getElementById('fileGallery');
+  const folderNameInput = document.getElementById('folderNameInput');
+  const folderNameBox = document.getElementById('folderNameBox');
+  const folderEditBtn = document.getElementById('folderEditBtn');
+  const folderDeleteBtn = document.getElementById('folderDeleteBtn');
+
+  let currentFolderId = null; // null = folder list view, '__unfiled__' = legacy files without a folder
+  let folderEditing = false;
+
+  if(window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  function fmtBytes(n){
+    if(n < 1024) return n + ' B';
+    if(n < 1024*1024) return (n/1024).toFixed(0) + ' KB';
+    return (n/1024/1024).toFixed(1) + ' MB';
+  }
+  function base64ToBlob(base64, mime){
+    const byteChars = atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+    for(let i=0;i<byteChars.length;i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    return new Blob([new Uint8Array(byteNumbers)], { type: mime });
+  }
+  function readAsDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  async function generateThumbnail(file){
+    if(!window.pdfjsLib) return null;
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = 260 / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.72);
+  }
+
+  function openPdfFile(f){
+    const blob = base64ToBlob(f.base64, 'application/pdf');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }
+
+  function folderFileCount(folderId){
+    if(folderId === '__unfiled__') return state.files.filter(f=>!f.folderId).length;
+    return state.files.filter(f=>f.folderId === folderId).length;
+  }
+
+  function renderFolderList(){
+    const realFolders = state.folders.map(fo => ({ id: fo.id, name: fo.name, virtual:false }));
+    const unfiledCount = folderFileCount('__unfiled__');
+    const folders = unfiledCount > 0
+      ? [...realFolders, { id:'__unfiled__', name:'미분류', virtual:true }]
+      : realFolders;
+
+    if(folders.length === 0){
+      folderGrid.innerHTML = `<div class="folder-empty" style="grid-column:1/-1;">아직 폴더가 없어요. 위에서 폴더를 만들어보세요.</div>`;
+      return;
+    }
+    folderGrid.innerHTML = folders.map(fo => `
+      <div class="folder-card" data-id="${fo.id}">
+        ${fo.virtual ? '' : `<button class="folder-del" title="폴더 삭제">🗑️</button>`}
+        <div class="folder-icon">📁</div>
+        <div class="folder-card-name">${escapeHtml(fo.name)}</div>
+        <div class="folder-card-count">${folderFileCount(fo.id)}개</div>
+      </div>`).join('');
+
+    folderGrid.querySelectorAll('.folder-card').forEach(card=>{
+      card.addEventListener('click', (e)=>{
+        if(e.target.closest('.folder-del')) return;
+        openFolder(card.dataset.id);
+      });
+    });
+    folderGrid.querySelectorAll('.folder-del').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = e.target.closest('.folder-card').dataset.id;
+        const folder = state.folders.find(f=>f.id===id);
+        if(!folder) return;
+        if(!confirm(`'${folder.name}' 폴더와 그 안의 PDF 파일을 모두 삭제할까요?`)) return;
+        state.files = state.files.filter(f=>f.folderId !== id);
+        state.folders = state.folders.filter(f=>f.id !== id);
+        save();
+        renderFolderList();
+      });
+    });
+  }
+
+  document.getElementById('folderAddBtn').addEventListener('click', addFolder);
+  folderNameInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') addFolder(); });
+  function addFolder(){
+    const name = folderNameInput.value.trim();
+    if(!name) return;
+    state.folders.push({ id:'fo_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name });
+    folderNameInput.value = '';
+    save();
+    renderFolderList();
+  }
+
+  function openFolder(id){
+    currentFolderId = id;
+    folderEditing = false;
+    folderListView.style.display = 'none';
+    fileGalleryView.style.display = 'block';
+    renderFolderNameBox();
+    renderFileGallery();
+  }
+  function closeFolder(){
+    currentFolderId = null;
+    fileGalleryView.style.display = 'none';
+    folderListView.style.display = 'block';
+    renderFolderList();
+  }
+  document.getElementById('storageBackBtn').addEventListener('click', closeFolder);
+
+  function renderFolderNameBox(){
+    const isVirtual = currentFolderId === '__unfiled__';
+    folderEditBtn.style.display = isVirtual ? 'none' : 'inline-flex';
+    folderDeleteBtn.style.display = isVirtual ? 'none' : 'inline-flex';
+    const folder = state.folders.find(f=>f.id===currentFolderId);
+    const name = isVirtual ? '미분류' : (folder ? folder.name : '');
+    if(folderEditing && !isVirtual){
+      folderNameBox.innerHTML = `<input type="text" id="folderRenameInput" value="${escapeHtml(name)}">`;
+      const input = document.getElementById('folderRenameInput');
+      input.focus();
+      input.select();
+      const commit = ()=>{
+        const v = input.value.trim();
+        if(v && folder){ folder.name = v; save(); }
+        folderEditing = false;
+        renderFolderNameBox();
+      };
+      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') commit(); if(e.key==='Escape'){ folderEditing=false; renderFolderNameBox(); } });
+      input.addEventListener('blur', commit);
+    } else {
+      folderNameBox.innerHTML = escapeHtml(name);
+    }
+  }
+  folderEditBtn.addEventListener('click', ()=>{ folderEditing = true; renderFolderNameBox(); });
+  folderDeleteBtn.addEventListener('click', ()=>{
+    const folder = state.folders.find(f=>f.id===currentFolderId);
+    if(!folder) return;
+    if(!confirm(`'${folder.name}' 폴더와 그 안의 PDF 파일을 모두 삭제할까요?`)) return;
+    state.files = state.files.filter(f=>f.folderId !== folder.id);
+    state.folders = state.folders.filter(f=>f.id !== folder.id);
+    save();
+    closeFolder();
+  });
+
+  function renderFileGallery(){
+    const files = currentFolderId === '__unfiled__'
+      ? state.files.filter(f=>!f.folderId)
+      : state.files.filter(f=>f.folderId === currentFolderId);
+
+    if(files.length === 0){
+      fileGallery.innerHTML = `<div class="file-empty" style="grid-column:1/-1;">아직 저장된 PDF가 없어요. 위 버튼으로 업로드해보세요.</div>`;
+      return;
+    }
+    fileGallery.innerHTML = files.map(f => `
+      <div class="file-card" data-id="${f.id}">
+        <button class="file-del" title="삭제">✕</button>
+        <div class="thumb-wrap">
+          ${f.thumb ? `<img src="${f.thumb}" alt="">` : `<span class="thumb-fallback">📄</span>`}
+        </div>
+        <div class="file-name">${escapeHtml(f.name)}</div>
+      </div>`).join('');
+
+    fileGallery.querySelectorAll('.file-card').forEach(card=>{
+      card.addEventListener('click', (e)=>{
+        if(e.target.closest('.file-del')) return;
+        const f = state.files.find(x=>x.id===card.dataset.id);
+        if(f) openPdfFile(f);
+      });
+    });
+    fileGallery.querySelectorAll('.file-del').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = e.target.closest('.file-card').dataset.id;
+        if(!confirm('이 파일을 삭제할까요?')) return;
+        state.files = state.files.filter(x=>x.id!==id);
+        save();
+        renderFileGallery();
+      });
+    });
+  }
+
+  pdfUploadInput.addEventListener('change', async ()=>{
+    const files = [...pdfUploadInput.files];
+    if(files.length === 0) return;
+    const folderId = (currentFolderId === '__unfiled__') ? null : currentFolderId;
+    for(const file of files){
+      let thumb = null;
+      try{ thumb = await generateThumbnail(file); }catch(e){ thumb = null; }
+      let dataUrl;
+      try{ dataUrl = await readAsDataURL(file); }catch(e){ continue; }
+      const base64 = dataUrl.split(',')[1];
+      state.files.push({
+        id:'f_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+        name:file.name,
+        size:file.size,
+        base64:base64,
+        thumb:thumb,
+        folderId:folderId
+      });
+    }
+    if(!save()){ /* quota warning already shown */ }
+    renderFileGallery();
+    pdfUploadInput.value = '';
+  });
+
+  document.getElementById('openStorageBtn').addEventListener('click', ()=>{
+    currentFolderId = null;
+    folderEditing = false;
+    fileGalleryView.style.display = 'none';
+    folderListView.style.display = 'block';
+    renderFolderList();
+    storageOverlay.classList.add('open');
+  });
+  document.getElementById('storageCloseBtn').addEventListener('click', ()=> storageOverlay.classList.remove('open'));
+  storageOverlay.addEventListener('click', (e)=>{ if(e.target === storageOverlay) storageOverlay.classList.remove('open'); });
+
+  // ---------- Google Drive backup ----------
+  const driveOverlay = document.getElementById('driveOverlay');
+  const driveStatus = document.getElementById('driveStatus');
+  const driveLoginRow = document.getElementById('driveLoginRow');
+  const driveActionsEl = document.getElementById('driveActions');
+
+  let accessToken = null;
+  let tokenExpiry = 0;
+  let tokenClient = null;
+
+  function setDriveStatus(msg){ driveStatus.textContent = msg; }
+
+  function waitForGoogleLib(timeout){
+    timeout = timeout || 4000;
+    return new Promise((resolve, reject)=>{
+      const start = Date.now();
+      (function check(){
+        if(window.google && google.accounts && google.accounts.oauth2){ resolve(); return; }
+        if(Date.now() - start > timeout){ reject(new Error('구글 로그인 스크립트를 불러오지 못했어요. 인터넷 연결을 확인해주세요.')); return; }
+        setTimeout(check, 150);
+      })();
+    });
+  }
+
+  async function ensureTokenClient(){
+    if(tokenClient) return;
+    await waitForGoogleLib();
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: ()=>{}
+    });
+  }
+
+  function getAccessToken(){
+    if(GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') === 0){
+      return Promise.reject(new Error('먼저 구글 클라우드에서 발급받은 클라이언트 ID를 코드의 GOOGLE_CLIENT_ID 자리에 넣어주세요.'));
+    }
+    return ensureTokenClient().then(()=> new Promise((resolve, reject)=>{
+      if(accessToken && Date.now() < tokenExpiry - 30000){ resolve(accessToken); return; }
+      tokenClient.callback = (resp)=>{
+        if(resp.error){ reject(new Error(resp.error)); return; }
+        accessToken = resp.access_token;
+        tokenExpiry = Date.now() + (resp.expires_in * 1000);
+        resolve(accessToken);
+      };
+      tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+    }));
+  }
+
+  async function driveFindBackupFile(token){
+    const q = encodeURIComponent(`name='${DRIVE_BACKUP_FILENAME}' and trashed=false`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+      headers:{ Authorization:'Bearer '+token }
+    });
+    if(!res.ok) throw new Error('드라이브 조회 실패: ' + res.status);
+    const data = await res.json();
+    return (data.files && data.files[0]) || null;
+  }
+
+  async function driveUploadResumable(token, fileId, contentString, mimeType){
+    const metadata = fileId ? {} : { name: DRIVE_BACKUP_FILENAME, mimeType };
+    const initUrl = fileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=resumable`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`;
+    const initRes = await fetch(initUrl, {
+      method: fileId ? 'PATCH' : 'POST',
+      headers:{
+        Authorization:'Bearer '+token,
+        'Content-Type':'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mimeType
+      },
+      body: JSON.stringify(metadata)
+    });
+    if(!initRes.ok) throw new Error('업로드 세션 생성 실패: ' + initRes.status);
+    const uploadUrl = initRes.headers.get('Location');
+    if(!uploadUrl) throw new Error('업로드 주소를 받지 못했어요.');
+    const blob = new Blob([contentString], { type: mimeType });
+    const putRes = await fetch(uploadUrl, { method:'PUT', headers:{ 'Content-Type': mimeType }, body: blob });
+    if(!putRes.ok) throw new Error('파일 업로드 실패: ' + putRes.status);
+    return putRes.json();
+  }
+
+  async function driveSaveToCloud(){
+    setDriveStatus('저장 중...');
+    try{
+      const token = await getAccessToken();
+      const existing = await driveFindBackupFile(token);
+      const content = JSON.stringify(state);
+      await driveUploadResumable(token, existing ? existing.id : null, content, 'application/json');
+      const now = new Date();
+      localStorage.setItem('lastDriveSync', now.toISOString());
+      setDriveStatus('✅ 저장 완료 · ' + now.toLocaleString('ko-KR'));
+    }catch(err){
+      setDriveStatus('❌ 저장 실패: ' + err.message);
+    }
+  }
+
+  async function driveLoadFromCloud(){
+    if(!confirm('드라이브에 저장된 데이터로 지금 화면의 모든 일정·체크리스트·PDF를 덮어씁니다. 계속할까요?')) return;
+    setDriveStatus('불러오는 중...');
+    try{
+      const token = await getAccessToken();
+      const existing = await driveFindBackupFile(token);
+      if(!existing){ setDriveStatus('드라이브에 저장된 백업이 아직 없어요. 먼저 저장해보세요.'); return; }
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+        headers:{ Authorization:'Bearer '+token }
+      });
+      if(!res.ok) throw new Error('다운로드 실패: ' + res.status);
+      const data = await res.json();
+      state = data;
+      if(!state.checklist) state.checklist = [];
+      if(!state.files) state.files = [];
+      if(!state.folders) state.folders = [];
+      save();
+      tripStartEl.value = state.tripStart || '';
+      tripEndEl.value = state.tripEnd || '';
+      renderAll();
+      setDriveStatus('✅ 불러오기 완료 · ' + new Date().toLocaleString('ko-KR'));
+    }catch(err){
+      setDriveStatus('❌ 불러오기 실패: ' + err.message);
+    }
+  }
+
+  document.getElementById('openDriveBtn').addEventListener('click', ()=>{
+    driveOverlay.classList.add('open');
+    if(accessToken){
+      driveLoginRow.style.display = 'none';
+      driveActionsEl.style.display = 'block';
+      setDriveStatus('연결됨');
+    } else {
+      driveLoginRow.style.display = 'block';
+      driveActionsEl.style.display = 'none';
+      setDriveStatus('아직 연결되지 않았어요.');
+    }
+  });
+  document.getElementById('driveLoginBtn').addEventListener('click', async ()=>{
+    setDriveStatus('연결 중...');
+    try{
+      await getAccessToken();
+      setDriveStatus('✅ 연결됨');
+      driveLoginRow.style.display = 'none';
+      driveActionsEl.style.display = 'block';
+    }catch(err){
+      setDriveStatus('❌ 연결 실패: ' + err.message);
+    }
+  });
+  document.getElementById('driveSaveBtn').addEventListener('click', driveSaveToCloud);
+  document.getElementById('driveLoadBtn').addEventListener('click', driveLoadFromCloud);
+  document.getElementById('driveCloseBtn').addEventListener('click', ()=> driveOverlay.classList.remove('open'));
+  driveOverlay.addEventListener('click', (e)=>{ if(e.target === driveOverlay) driveOverlay.classList.remove('open'); });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
