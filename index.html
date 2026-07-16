@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
@@ -429,7 +430,7 @@
   .cat-opt.sel[data-cat="meal"]{ border-color:var(--clay); background:var(--clay-soft); color:var(--clay); }
   .cat-opt.sel[data-cat="hotel"]{ border-color:var(--purple); background:var(--purple-soft); color:var(--purple); }
 
-  input[type=text], input[type=date], input[type=time]{
+  input[type=text], input[type=date], input[type=time], input[type=number], select{
     width:100%;
     font-family:inherit;
     font-size:0.95em;
@@ -439,10 +440,11 @@
     background:#fbfbf9;
     color:var(--ink);
   }
-  input:focus, textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; }
   .time-row{ display:flex; align-items:center; gap:0.5em; }
   .time-row input{ flex:1; min-width:0; }
   .time-row .to{ color:var(--ink-soft); font-size:0.85em; }
+  .link-field-row select#currencyInput{ flex:0 0 auto; width:6em; }
 
   .memo-toolbar{ display:flex; gap:0.4em; margin-bottom:0.4em; }
   .tool-btn{
@@ -531,6 +533,72 @@
   }
   .checklist-row .ct-del:hover{ color:#B3402F; }
   .checklist-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:2em 1em; }
+
+  /* ---------- Settlement summary ---------- */
+  .view-header{
+    display:flex;
+    align-items:center;
+    gap:0.6em;
+    padding-top: clamp(14px,3vw,28px);
+    margin-bottom:1.2em;
+  }
+  .view-title{
+    font-family:inherit;
+    font-weight:800;
+    font-size:1.5em;
+    margin:0;
+    color:var(--ink);
+    letter-spacing:-0.01em;
+  }
+  .settle-total{
+    text-align:center;
+    padding:1.1em 0;
+    margin-bottom:1.2em;
+    background:var(--bg);
+    border-radius:14px;
+  }
+  .settle-total-label{ font-size:0.8em; color:var(--ink-soft); font-weight:600; }
+  .settle-total-amount{ font-size:1.8em; font-weight:800; color:var(--ink); margin-top:0.2em; }
+  .settle-total-amount div + div{ margin-top:0.1em; font-size:0.6em; }
+  .settle-section{ margin-bottom:1.2em; }
+  .settle-section-title{ font-size:0.8em; font-weight:700; color:var(--ink-soft); margin-bottom:0.5em; }
+  .settle-currency-title{ font-size:0.76em; font-weight:800; color:var(--ink); margin:0.8em 0 0.3em; }
+  .settle-currency-title:first-child{ margin-top:0; }
+  .settle-row{
+    display:flex;
+    align-items:center;
+    gap:0.6em;
+    padding:0.5em 0;
+    border-bottom:1px solid var(--line);
+  }
+  .settle-row:last-child{ border-bottom:none; }
+  .settle-row .settle-label{
+    flex:0 0 auto;
+    width:4.4em;
+    display:flex;
+    align-items:center;
+    gap:0.35em;
+    font-size:0.85em;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .settle-row .settle-bar-wrap{
+    flex:1;
+    height:0.5em;
+    background:var(--bg);
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .settle-row .settle-bar{ height:100%; background:var(--ink); border-radius:999px; }
+  .settle-row .settle-amount{
+    flex:0 0 auto;
+    width:5.2em;
+    text-align:right;
+    font-size:0.82em;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .settle-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:1.2em 0; }
 
   /* ---------- Storage(PDF) ---------- */
   .storage-back-row{ display:flex; align-items:center; gap:0.4em; }
@@ -638,7 +706,7 @@
 </head>
 <body>
 
-<div class="wrap">
+<div class="wrap" id="mainWrap">
   <div class="sticky-top">
     <header>
       <div class="title-row">
@@ -653,6 +721,7 @@
         <button class="header-btn" id="openChecklistBtn"><span class="icon-svg" data-icon="checklist"></span>체크</button>
         <button class="header-btn" id="openStorageBtn"><span class="icon-svg" data-icon="folder"></span>보관함</button>
         <button class="header-btn" id="openDriveBtn"><span class="icon-svg" data-icon="cloud"></span>드라이브</button>
+        <button class="header-btn" id="openSettlementBtn"><span class="icon-svg" data-icon="money"></span>정산</button>
       </div>
     </header>
 
@@ -688,6 +757,21 @@
     <div class="field">
       <label>제목</label>
       <input type="text" id="titleInput" placeholder="예: 에펠탑, 나리타 공항 이동, 라멘 맛집">
+    </div>
+
+    <div class="field">
+      <label>금액 <span style="font-weight:400;">(선택)</span></label>
+      <div class="link-field-row">
+        <input type="number" id="amountInput" placeholder="0" min="0" step="100" inputmode="numeric">
+        <select id="currencyInput">
+          <option value="KRW">원화</option>
+          <option value="USD">달러</option>
+          <option value="EUR">유로</option>
+          <option value="JPY">엔화</option>
+          <option value="GBP">파운드</option>
+          <option value="CNY">위안</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
@@ -834,6 +918,27 @@
     <div class="modal-actions">
       <button class="btn primary" id="periodDoneBtn">완료</button>
     </div>
+  </div>
+</div>
+
+<div class="wrap" id="settlementWrap" style="display:none;">
+  <div class="view-header">
+    <button class="icon-btn" id="settlementBackBtn" title="돌아가기"><span class="icon-svg" data-icon="back"></span></button>
+    <h1 class="view-title">정산 요약</h1>
+    <div class="spacer"></div>
+    <button class="header-btn" id="exportExcelBtn"><span class="icon-svg" data-icon="download"></span>엑셀</button>
+  </div>
+  <div class="settle-total">
+    <div class="settle-total-label">총 지출</div>
+    <div class="settle-total-amount" id="settleTotalAmount">0원</div>
+  </div>
+  <div class="settle-section">
+    <div class="settle-section-title">카테고리별</div>
+    <div id="settleByCategory"></div>
+  </div>
+  <div class="settle-section">
+    <div class="settle-section-title">날짜별</div>
+    <div id="settleByDay"></div>
   </div>
 </div>
 
@@ -1016,7 +1121,10 @@
     map:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>',
     navigation:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
     paperclip:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
-    grid:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
+    grid:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    money:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 3-1.5c1.5 0 3 .8 3 2s-1.5 2-3 2-3 .8-3 2 1.5 2 3 2a3 3 0 0 0 3-1.5"/><line x1="12" y1="6" x2="12" y2="18"/></svg>',
+    back:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+    download:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 19h14"/></svg>'
   };
   function injectIcons(){
     document.querySelectorAll('.icon-svg[data-icon]').forEach(el=>{
@@ -1053,11 +1161,21 @@
     return { dayNum, full };
   }
 
+  const CURRENCY_SYMBOLS = { USD:'$', EUR:'€', JPY:'¥', GBP:'£', CNY:'¥' };
+  function fmtMoney(n, currency){
+    const amt = Number(n) || 0;
+    const cur = currency || 'KRW';
+    if(cur === 'KRW') return amt.toLocaleString('ko-KR') + '원';
+    const sym = CURRENCY_SYMBOLS[cur] || '';
+    return `${sym}${amt.toLocaleString('en-US')} ${cur}`;
+  }
+
   function cardHtml(it){
     const meta = CAT_META[it.category] || CAT_META.place;
-    const timeLabel = (it.startTime || it.endTime)
-      ? `${it.startTime||''}${it.endTime ? '~'+it.endTime : ''}`
-      : '';
+    const timeParts = [];
+    if(it.startTime || it.endTime) timeParts.push(`${it.startTime||''}${it.endTime ? '~'+it.endTime : ''}`);
+    if(it.amount) timeParts.push(fmtMoney(it.amount, it.currency));
+    const timeLabel = timeParts.join(' · ');
     const q = encodeURIComponent(it.title || '');
     const mapHref = it.mapUrl ? escapeHtml(it.mapUrl) : `https://www.google.com/maps/search/?api=1&query=${q}`;
     const dirHref = it.dirUrl ? escapeHtml(it.dirUrl) : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
@@ -1233,6 +1351,8 @@
   const dateInput = document.getElementById('dateInput');
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
+  const amountInput = document.getElementById('amountInput');
+  const currencyInput = document.getElementById('currencyInput');
   const memoInput = document.getElementById('memoInput');
   const boldBtn = document.getElementById('boldBtn');
   const deleteBtn = document.getElementById('deleteBtn');
@@ -1264,6 +1384,8 @@
     dateInput.value = item ? item.date : (presetDate || (selectedDay !== 'all' ? selectedDay : (state.tripStart || '')));
     startTimeInput.value = item ? (item.startTime||'') : '';
     endTimeInput.value = item ? (item.endTime||'') : '';
+    amountInput.value = item && item.amount ? item.amount : '';
+    currencyInput.value = item && item.currency ? item.currency : 'KRW';
     memoInput.value = item ? (item.memo||'') : '';
     mapUrlInput.value = item ? (item.mapUrl||'') : '';
     dirUrlInput.value = item ? (item.dirUrl||'') : '';
@@ -1343,6 +1465,8 @@
       date: dateInput.value,
       startTime: startTimeInput.value,
       endTime: endTimeInput.value,
+      amount: amountInput.value ? Number(amountInput.value) : 0,
+      currency: currencyInput.value,
       memo: memoInput.value,
       mapUrl: mapUrlInput.value.trim(),
       dirUrl: dirUrlInput.value.trim(),
@@ -1846,6 +1970,115 @@
   document.getElementById('driveLoadBtn').addEventListener('click', driveLoadFromCloud);
   document.getElementById('driveCloseBtn').addEventListener('click', ()=> driveOverlay.classList.remove('open'));
   driveOverlay.addEventListener('click', (e)=>{ if(e.target === driveOverlay) driveOverlay.classList.remove('open'); });
+
+  // ---------- Settlement summary (full-screen view) ----------
+  const mainWrap = document.getElementById('mainWrap');
+  const settlementWrap = document.getElementById('settlementWrap');
+
+  function renderSettlement(){
+    const withAmount = state.items.filter(it => it.amount);
+    const currencies = [...new Set(withAmount.map(it => it.currency || 'KRW'))];
+
+    if(currencies.length === 0){
+      document.getElementById('settleTotalAmount').innerHTML = `<div>0원</div>`;
+    } else {
+      document.getElementById('settleTotalAmount').innerHTML = currencies.map(cur => {
+        const sum = withAmount.filter(it => (it.currency||'KRW') === cur).reduce((s,it)=>s+Number(it.amount),0);
+        return `<div>${fmtMoney(sum, cur)}</div>`;
+      }).join('');
+    }
+
+    let catHtml = '';
+    currencies.forEach(cur => {
+      const items = withAmount.filter(it => (it.currency||'KRW') === cur);
+      const catTotals = {};
+      Object.keys(CAT_META).forEach(c => catTotals[c] = 0);
+      items.forEach(it => { catTotals[it.category] = (catTotals[it.category]||0) + Number(it.amount); });
+      const maxCat = Math.max(1, ...Object.values(catTotals));
+      if(currencies.length > 1) catHtml += `<div class="settle-currency-title">${cur}</div>`;
+      catHtml += Object.keys(CAT_META).map(c => {
+        const meta = CAT_META[c];
+        const amt = catTotals[c] || 0;
+        const pct = Math.round((amt / maxCat) * 100);
+        return `<div class="settle-row"><div class="settle-label"><span class="icon-svg">${ICON_SVGS[meta.icon]}</span>${meta.label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt, cur)}</div></div>`;
+      }).join('');
+    });
+    document.getElementById('settleByCategory').innerHTML = catHtml || `<div class="settle-empty">지출 내역이 없어요.</div>`;
+
+    let dayHtmlAll = '';
+    currencies.forEach(cur => {
+      const items = withAmount.filter(it => (it.currency||'KRW') === cur);
+      const dayTotals = {};
+      items.forEach(it => {
+        const key = it.date || '__nodate__';
+        dayTotals[key] = (dayTotals[key]||0) + Number(it.amount);
+      });
+      let dayKeys = Object.keys(dayTotals).filter(k => k !== '__nodate__').sort();
+      if(dayTotals['__nodate__']) dayKeys.push('__nodate__');
+      const maxDay = Math.max(1, ...Object.values(dayTotals));
+      if(currencies.length > 1) dayHtmlAll += `<div class="settle-currency-title">${cur}</div>`;
+      dayHtmlAll += dayKeys.map(k => {
+        const amt = dayTotals[k];
+        const pct = Math.round((amt / maxDay) * 100);
+        let label;
+        if(k === '__nodate__'){ label = '미정'; }
+        else {
+          const { dayNum } = dayGroupLabel(k);
+          label = dayNum ? `DAY ${dayNum}` : fmtLabel(k);
+        }
+        return `<div class="settle-row"><div class="settle-label">${label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt, cur)}</div></div>`;
+      }).join('');
+    });
+    document.getElementById('settleByDay').innerHTML = dayHtmlAll || `<div class="settle-empty">지출 내역이 없어요.</div>`;
+  }
+
+  function exportExcel(){
+    if(!window.XLSX){
+      alert('엑셀 기능을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요.');
+      return;
+    }
+    const rows = state.items
+      .filter(it => it.amount)
+      .slice()
+      .sort((a,b) => {
+        if((a.date||'') !== (b.date||'')) return (a.date||'').localeCompare(b.date||'');
+        return (a.order||0) - (b.order||0);
+      })
+      .map(it => {
+        const dg = it.date ? dayGroupLabel(it.date) : { dayNum: null };
+        return {
+          '날짜': it.date || '',
+          'DAY': dg.dayNum ? `DAY ${dg.dayNum}` : '',
+          '카테고리': (CAT_META[it.category]||{}).label || '',
+          '장소/제목': it.title || '',
+          '금액': Number(it.amount) || 0,
+          '통화': it.currency || 'KRW'
+        };
+      });
+    if(rows.length === 0){
+      alert('내보낼 지출 내역이 없어요. 일정에 금액을 먼저 입력해주세요.');
+      return;
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:26},{wch:12},{wch:8}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '지출내역');
+    const fname = `여행경비_${state.tripStart||'start'}_${state.tripEnd||'end'}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  }
+
+  document.getElementById('openSettlementBtn').addEventListener('click', ()=>{
+    renderSettlement();
+    mainWrap.style.display = 'none';
+    settlementWrap.style.display = 'block';
+    window.scrollTo(0,0);
+    injectIcons();
+  });
+  document.getElementById('settlementBackBtn').addEventListener('click', ()=>{
+    settlementWrap.style.display = 'none';
+    mainWrap.style.display = 'block';
+  });
+  document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
 
   renderAll();
 })();
