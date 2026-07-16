@@ -84,10 +84,16 @@
   .meta-row{
     display:flex;
     align-items:center;
-    gap:0.55em;
-    flex-wrap:wrap;
+    gap:0.6em;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:0.1em;
   }
-  .meta-row .spacer{ flex:1; }
+  .meta-row::-webkit-scrollbar{ display:none; }
+  .meta-row > *{ flex:0 0 auto; }
+  .spacer{ flex:1; }
   .header-btn{
     flex:0 0 auto;
     display:flex; align-items:center; gap:0.3em;
@@ -444,7 +450,6 @@
   .time-row{ display:flex; align-items:center; gap:0.5em; }
   .time-row input{ flex:1; min-width:0; }
   .time-row .to{ color:var(--ink-soft); font-size:0.85em; }
-  .link-field-row select#currencyInput{ flex:0 0 auto; width:6em; }
 
   .memo-toolbar{ display:flex; gap:0.4em; margin-bottom:0.4em; }
   .tool-btn{
@@ -474,6 +479,23 @@
   .hint{ font-size:0.72em; color:var(--ink-soft); margin-top:0.35em; }
 
   .link-field-row{ display:flex; gap:0.4em; align-items:center; }
+
+  .expense-row{
+    display:flex;
+    gap:0.4em;
+    align-items:center;
+    margin-bottom:0.5em;
+  }
+  .expense-row .expense-desc{ flex:1.5; min-width:0; }
+  .expense-row .expense-amount{ flex:1; min-width:0; }
+  .expense-row .expense-currency{ flex:0 0 auto; width:4.4em; padding-left:0.4em; padding-right:0.3em; }
+  .expense-row .expense-del{
+    flex:0 0 auto;
+    border:none; background:transparent; color:var(--ink-soft);
+    cursor:pointer; padding:0.3em; border-radius:6px; font-size:0.95em;
+  }
+  .expense-row .expense-del:hover{ background:var(--bg); color:#B3402F; }
+  .expense-empty-hint{ font-size:0.8em; color:var(--ink-soft); margin-bottom:0.5em; }
   .link-field-row input{ flex:1; min-width:0; font-size:0.85em; }
   .autofill-btn{
     flex:0 0 auto;
@@ -562,6 +584,30 @@
   .settle-total-amount div + div{ margin-top:0.1em; font-size:0.6em; }
   .settle-section{ margin-bottom:1.2em; }
   .settle-section-title{ font-size:0.8em; font-weight:700; color:var(--ink-soft); margin-bottom:0.5em; }
+
+  .rate-row-combined{ display:flex; gap:0.8em; }
+  .rate-item{ flex:1; display:flex; align-items:center; gap:0.35em; min-width:0; }
+  .rate-item label{ flex:0 0 auto; font-size:0.8em; font-weight:600; color:var(--ink); }
+  .rate-item input{ flex:1; min-width:0; padding:0.5em 0.5em; font-size:0.85em; text-align:right; }
+  .rate-item span{ flex:0 0 auto; font-size:0.78em; color:var(--ink-soft); }
+
+  .settle-toggle-btn{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:0.65em 0.9em;
+    font-family:inherit;
+    font-size:0.85em;
+    font-weight:600;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .settle-toggle-btn .chev{ color:var(--ink-soft); transition:transform .15s ease; }
+  .settle-toggle-btn.open .chev{ transform:rotate(180deg); }
   .settle-currency-title{ font-size:0.76em; font-weight:800; color:var(--ink); margin:0.8em 0 0.3em; }
   .settle-currency-title:first-child{ margin-top:0; }
   .settle-row{
@@ -599,6 +645,25 @@
     color:var(--ink);
   }
   .settle-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:1.2em 0; }
+
+  .settle-preview-list{
+    max-height:22em;
+    overflow-y:auto;
+  }
+  .settle-preview-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:0.6em;
+    padding:0.6em 0;
+    border-bottom:1px solid var(--line);
+  }
+  .settle-preview-row:last-child{ border-bottom:none; }
+  .spv-main{ min-width:0; }
+  .spv-title{ font-size:0.86em; font-weight:700; color:var(--ink); word-break:break-word; }
+  .spv-desc{ font-size:0.78em; color:var(--ink-soft); margin-top:0.15em; word-break:break-word; }
+  .spv-amount{ flex:0 0 auto; font-size:0.85em; font-weight:700; color:var(--ink); white-space:nowrap; text-align:right; }
+  .spv-amount .spv-krw{ display:block; font-size:0.78em; font-weight:500; color:var(--ink-soft); margin-top:0.1em; }
 
   /* ---------- Storage(PDF) ---------- */
   .storage-back-row{ display:flex; align-items:center; gap:0.4em; }
@@ -717,11 +782,10 @@
           <span class="date-display placeholder" id="periodRangeDisplay">여행 기간 설정</span>
         </button>
         <span class="days-badge" id="daysBadge" style="display:none;"></span>
-        <div class="spacer"></div>
         <button class="header-btn" id="openChecklistBtn"><span class="icon-svg" data-icon="checklist"></span>체크</button>
-        <button class="header-btn" id="openStorageBtn"><span class="icon-svg" data-icon="folder"></span>보관함</button>
-        <button class="header-btn" id="openDriveBtn"><span class="icon-svg" data-icon="cloud"></span>드라이브</button>
-        <button class="header-btn" id="openSettlementBtn"><span class="icon-svg" data-icon="money"></span>정산</button>
+        <button class="header-btn" id="openStorageBtn"><span class="icon-svg" data-icon="folder"></span>보관</button>
+        <button class="header-btn" id="openDriveBtn"><span class="icon-svg" data-icon="cloud"></span>계정</button>
+        <button class="header-btn" id="openSettlementBtn"><span class="icon-svg" data-icon="money"></span>지출</button>
       </div>
     </header>
 
@@ -760,18 +824,9 @@
     </div>
 
     <div class="field">
-      <label>금액 <span style="font-weight:400;">(선택)</span></label>
-      <div class="link-field-row">
-        <input type="number" id="amountInput" placeholder="0" min="0" step="100" inputmode="numeric">
-        <select id="currencyInput">
-          <option value="KRW">원화</option>
-          <option value="USD">달러</option>
-          <option value="EUR">유로</option>
-          <option value="JPY">엔화</option>
-          <option value="GBP">파운드</option>
-          <option value="CNY">위안</option>
-        </select>
-      </div>
+      <label>지출 내역 <span style="font-weight:400;">(선택, 여러 개 추가 가능)</span></label>
+      <div id="expenseRows"></div>
+      <button type="button" class="autofill-btn" id="addExpenseRowBtn">＋ 지출 추가</button>
     </div>
 
     <div class="field">
@@ -924,21 +979,48 @@
 <div class="wrap" id="settlementWrap" style="display:none;">
   <div class="view-header">
     <button class="icon-btn" id="settlementBackBtn" title="돌아가기"><span class="icon-svg" data-icon="back"></span></button>
-    <h1 class="view-title">정산 요약</h1>
+    <h1 class="view-title">지출 정산</h1>
     <div class="spacer"></div>
     <button class="header-btn" id="exportExcelBtn"><span class="icon-svg" data-icon="download"></span>엑셀</button>
   </div>
   <div class="settle-total">
-    <div class="settle-total-label">총 지출</div>
+    <div class="settle-total-label" id="settleTotalLabel">총 지출 (원화 환산)</div>
     <div class="settle-total-amount" id="settleTotalAmount">0원</div>
   </div>
+
   <div class="settle-section">
-    <div class="settle-section-title">카테고리별</div>
-    <div id="settleByCategory"></div>
+    <div class="settle-section-title">환율 설정</div>
+    <div class="rate-row-combined">
+      <div class="rate-item">
+        <label for="rateUSD">달러</label>
+        <input type="number" id="rateUSD" min="0" step="1">
+        <span>원</span>
+      </div>
+      <div class="rate-item">
+        <label for="rateEUR">유로</label>
+        <input type="number" id="rateEUR" min="0" step="1">
+        <span>원</span>
+      </div>
+    </div>
   </div>
+
   <div class="settle-section">
-    <div class="settle-section-title">날짜별</div>
-    <div id="settleByDay"></div>
+    <button type="button" class="settle-toggle-btn" id="toggleCategoryBtn">카테고리별 보기<span class="chev">▾</span></button>
+    <div id="categoryDetail" style="display:none;">
+      <div id="settleByCategory"></div>
+    </div>
+  </div>
+
+  <div class="settle-section">
+    <button type="button" class="settle-toggle-btn" id="toggleDayBtn">날짜별 보기<span class="chev">▾</span></button>
+    <div id="dayDetail" style="display:none;">
+      <div id="settleByDay"></div>
+    </div>
+  </div>
+
+  <div class="settle-section">
+    <div class="settle-section-title">지출 내역</div>
+    <div id="settlePreviewList" class="settle-preview-list"></div>
   </div>
 </div>
 
@@ -969,6 +1051,14 @@
     if(!s.checklist) s.checklist = [];
     if(!s.files) s.files = [];
     if(!s.folders) s.folders = [];
+    if(!s.exchangeRates) s.exchangeRates = { USD: 1500, EUR: 1700 };
+    (s.items||[]).forEach(it=>{
+      if(!it.expenses){
+        it.expenses = it.amount
+          ? [{ id:'ex_'+Math.random().toString(36).slice(2,9), desc: it.title||'', amount: Number(it.amount)||0, currency: it.currency||'KRW' }]
+          : [];
+      }
+    });
     return s;
   }
   function save(){
@@ -1169,12 +1259,29 @@
     const sym = CURRENCY_SYMBOLS[cur] || '';
     return `${sym}${amt.toLocaleString('en-US')} ${cur}`;
   }
+  function toKRW(amount, currency){
+    const cur = currency || 'KRW';
+    if(cur === 'KRW') return Math.round(Number(amount)||0);
+    const rate = (state.exchangeRates && state.exchangeRates[cur]) || 1;
+    return Math.round((Number(amount)||0) * rate);
+  }
+  function fmtExpenseSummary(expenses){
+    if(!expenses || expenses.length === 0) return '';
+    const byCur = {};
+    expenses.forEach(e => {
+      if(!e.amount) return;
+      const c = e.currency || 'KRW';
+      byCur[c] = (byCur[c]||0) + Number(e.amount);
+    });
+    return Object.keys(byCur).map(c => fmtMoney(byCur[c], c)).join(' + ');
+  }
 
   function cardHtml(it){
     const meta = CAT_META[it.category] || CAT_META.place;
     const timeParts = [];
     if(it.startTime || it.endTime) timeParts.push(`${it.startTime||''}${it.endTime ? '~'+it.endTime : ''}`);
-    if(it.amount) timeParts.push(fmtMoney(it.amount, it.currency));
+    const expenseSummary = fmtExpenseSummary(it.expenses);
+    if(expenseSummary) timeParts.push(expenseSummary);
     const timeLabel = timeParts.join(' · ');
     const q = encodeURIComponent(it.title || '');
     const mapHref = it.mapUrl ? escapeHtml(it.mapUrl) : `https://www.google.com/maps/search/?api=1&query=${q}`;
@@ -1351,14 +1458,50 @@
   const dateInput = document.getElementById('dateInput');
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
-  const amountInput = document.getElementById('amountInput');
-  const currencyInput = document.getElementById('currencyInput');
+  const expenseRowsEl = document.getElementById('expenseRows');
   const memoInput = document.getElementById('memoInput');
   const boldBtn = document.getElementById('boldBtn');
   const deleteBtn = document.getElementById('deleteBtn');
   const mapUrlInput = document.getElementById('mapUrlInput');
   const dirUrlInput = document.getElementById('dirUrlInput');
   const modalLinkedFileName = document.getElementById('modalLinkedFileName');
+
+  let modalExpenses = [];
+
+  function renderExpenseRows(){
+    if(modalExpenses.length === 0){
+      expenseRowsEl.innerHTML = `<div class="expense-empty-hint">아직 추가된 지출이 없어요.</div>`;
+      return;
+    }
+    expenseRowsEl.innerHTML = modalExpenses.map(ex => `
+      <div class="expense-row" data-id="${ex.id}">
+        <input type="text" class="expense-desc" placeholder="지출 내용 (예: 택시비)" value="${escapeHtml(ex.desc||'')}">
+        <input type="number" class="expense-amount" placeholder="0" min="0" step="100" inputmode="numeric" value="${ex.amount||''}">
+        <select class="expense-currency">
+          <option value="KRW"${ex.currency==='KRW'?' selected':''}>원화</option>
+          <option value="USD"${ex.currency==='USD'?' selected':''}>달러</option>
+          <option value="EUR"${ex.currency==='EUR'?' selected':''}>유로</option>
+        </select>
+        <button type="button" class="expense-del" title="삭제">✕</button>
+      </div>`).join('');
+
+    expenseRowsEl.querySelectorAll('.expense-row').forEach(row => {
+      const id = row.dataset.id;
+      const ex = modalExpenses.find(e => e.id === id);
+      if(!ex) return;
+      row.querySelector('.expense-desc').addEventListener('input', e => { ex.desc = e.target.value; });
+      row.querySelector('.expense-amount').addEventListener('input', e => { ex.amount = e.target.value; });
+      row.querySelector('.expense-currency').addEventListener('change', e => { ex.currency = e.target.value; });
+      row.querySelector('.expense-del').addEventListener('click', () => {
+        modalExpenses = modalExpenses.filter(e => e.id !== id);
+        renderExpenseRows();
+      });
+    });
+  }
+  document.getElementById('addExpenseRowBtn').addEventListener('click', () => {
+    modalExpenses.push({ id:'ex_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), desc:'', amount:'', currency:'KRW' });
+    renderExpenseRows();
+  });
 
   function updateModalLinkedFileDisplay(){
     const f = modalLinkedFileId ? state.files.find(x=>x.id===modalLinkedFileId) : null;
@@ -1384,8 +1527,8 @@
     dateInput.value = item ? item.date : (presetDate || (selectedDay !== 'all' ? selectedDay : (state.tripStart || '')));
     startTimeInput.value = item ? (item.startTime||'') : '';
     endTimeInput.value = item ? (item.endTime||'') : '';
-    amountInput.value = item && item.amount ? item.amount : '';
-    currencyInput.value = item && item.currency ? item.currency : 'KRW';
+    modalExpenses = item && item.expenses ? item.expenses.map(e => ({...e})) : [];
+    renderExpenseRows();
     memoInput.value = item ? (item.memo||'') : '';
     mapUrlInput.value = item ? (item.mapUrl||'') : '';
     dirUrlInput.value = item ? (item.dirUrl||'') : '';
@@ -1465,8 +1608,9 @@
       date: dateInput.value,
       startTime: startTimeInput.value,
       endTime: endTimeInput.value,
-      amount: amountInput.value ? Number(amountInput.value) : 0,
-      currency: currencyInput.value,
+      expenses: modalExpenses
+        .map(e => ({ id: e.id, desc: (e.desc||'').trim(), amount: e.amount ? Number(e.amount) : 0, currency: e.currency || 'KRW' }))
+        .filter(e => e.desc || e.amount),
       memo: memoInput.value,
       mapUrl: mapUrlInput.value.trim(),
       dirUrl: dirUrlInput.value.trim(),
@@ -1975,61 +2119,80 @@
   const mainWrap = document.getElementById('mainWrap');
   const settlementWrap = document.getElementById('settlementWrap');
 
-  function renderSettlement(){
-    const withAmount = state.items.filter(it => it.amount);
-    const currencies = [...new Set(withAmount.map(it => it.currency || 'KRW'))];
-
-    if(currencies.length === 0){
-      document.getElementById('settleTotalAmount').innerHTML = `<div>0원</div>`;
-    } else {
-      document.getElementById('settleTotalAmount').innerHTML = currencies.map(cur => {
-        const sum = withAmount.filter(it => (it.currency||'KRW') === cur).reduce((s,it)=>s+Number(it.amount),0);
-        return `<div>${fmtMoney(sum, cur)}</div>`;
-      }).join('');
-    }
-
-    let catHtml = '';
-    currencies.forEach(cur => {
-      const items = withAmount.filter(it => (it.currency||'KRW') === cur);
-      const catTotals = {};
-      Object.keys(CAT_META).forEach(c => catTotals[c] = 0);
-      items.forEach(it => { catTotals[it.category] = (catTotals[it.category]||0) + Number(it.amount); });
-      const maxCat = Math.max(1, ...Object.values(catTotals));
-      if(currencies.length > 1) catHtml += `<div class="settle-currency-title">${cur}</div>`;
-      catHtml += Object.keys(CAT_META).map(c => {
-        const meta = CAT_META[c];
-        const amt = catTotals[c] || 0;
-        const pct = Math.round((amt / maxCat) * 100);
-        return `<div class="settle-row"><div class="settle-label"><span class="icon-svg">${ICON_SVGS[meta.icon]}</span>${meta.label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt, cur)}</div></div>`;
-      }).join('');
-    });
-    document.getElementById('settleByCategory').innerHTML = catHtml || `<div class="settle-empty">지출 내역이 없어요.</div>`;
-
-    let dayHtmlAll = '';
-    currencies.forEach(cur => {
-      const items = withAmount.filter(it => (it.currency||'KRW') === cur);
-      const dayTotals = {};
-      items.forEach(it => {
-        const key = it.date || '__nodate__';
-        dayTotals[key] = (dayTotals[key]||0) + Number(it.amount);
+  function flattenExpenses(){
+    const list = [];
+    state.items.forEach(it=>{
+      (it.expenses||[]).forEach(ex=>{
+        if(!ex.amount) return;
+        list.push({
+          itemTitle: it.title || '(제목 없음)',
+          itemDate: it.date || '',
+          itemCategory: it.category,
+          itemOrder: it.order || 0,
+          desc: ex.desc || '',
+          amount: Number(ex.amount) || 0,
+          currency: ex.currency || 'KRW',
+          krw: toKRW(ex.amount, ex.currency)
+        });
       });
-      let dayKeys = Object.keys(dayTotals).filter(k => k !== '__nodate__').sort();
-      if(dayTotals['__nodate__']) dayKeys.push('__nodate__');
-      const maxDay = Math.max(1, ...Object.values(dayTotals));
-      if(currencies.length > 1) dayHtmlAll += `<div class="settle-currency-title">${cur}</div>`;
-      dayHtmlAll += dayKeys.map(k => {
-        const amt = dayTotals[k];
-        const pct = Math.round((amt / maxDay) * 100);
-        let label;
-        if(k === '__nodate__'){ label = '미정'; }
-        else {
-          const { dayNum } = dayGroupLabel(k);
-          label = dayNum ? `DAY ${dayNum}` : fmtLabel(k);
-        }
-        return `<div class="settle-row"><div class="settle-label">${label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt, cur)}</div></div>`;
-      }).join('');
     });
-    document.getElementById('settleByDay').innerHTML = dayHtmlAll || `<div class="settle-empty">지출 내역이 없어요.</div>`;
+    list.sort((a,b)=>{
+      if(a.itemDate !== b.itemDate) return a.itemDate.localeCompare(b.itemDate);
+      return a.itemOrder - b.itemOrder;
+    });
+    return list;
+  }
+
+  function renderSettlement(){
+    const list = flattenExpenses();
+
+    const total = list.reduce((s,e)=>s+e.krw, 0);
+    document.getElementById('settleTotalAmount').textContent = fmtMoney(total, 'KRW');
+
+    const catTotals = {};
+    Object.keys(CAT_META).forEach(c => catTotals[c] = 0);
+    list.forEach(e => { catTotals[e.itemCategory] = (catTotals[e.itemCategory]||0) + e.krw; });
+    const maxCat = Math.max(1, ...Object.values(catTotals));
+    document.getElementById('settleByCategory').innerHTML = Object.keys(CAT_META).map(c => {
+      const meta = CAT_META[c];
+      const amt = catTotals[c] || 0;
+      const pct = Math.round((amt / maxCat) * 100);
+      return `<div class="settle-row"><div class="settle-label"><span class="icon-svg">${ICON_SVGS[meta.icon]}</span>${meta.label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt,'KRW')}</div></div>`;
+    }).join('');
+
+    const dayTotals = {};
+    list.forEach(e => {
+      const key = e.itemDate || '__nodate__';
+      dayTotals[key] = (dayTotals[key]||0) + e.krw;
+    });
+    let dayKeys = Object.keys(dayTotals).filter(k => k !== '__nodate__').sort();
+    if(dayTotals['__nodate__']) dayKeys.push('__nodate__');
+    const maxDay = Math.max(1, ...Object.values(dayTotals));
+    const dayHtml = dayKeys.map(k => {
+      const amt = dayTotals[k];
+      const pct = Math.round((amt / maxDay) * 100);
+      let label;
+      if(k === '__nodate__'){ label = '미정'; }
+      else {
+        const { dayNum } = dayGroupLabel(k);
+        label = dayNum ? `DAY ${dayNum}` : fmtLabel(k);
+      }
+      return `<div class="settle-row"><div class="settle-label">${label}</div><div class="settle-bar-wrap"><div class="settle-bar" style="width:${pct}%"></div></div><div class="settle-amount">${fmtMoney(amt,'KRW')}</div></div>`;
+    }).join('');
+    document.getElementById('settleByDay').innerHTML = dayHtml || `<div class="settle-empty">지출 내역이 없어요.</div>`;
+
+    document.getElementById('settlePreviewList').innerHTML = list.length === 0
+      ? `<div class="settle-empty">지출 내역이 없어요.</div>`
+      : list.map(e => {
+          const krwLine = e.currency !== 'KRW' ? `<span class="spv-krw">${fmtMoney(e.krw,'KRW')}</span>` : '';
+          return `<div class="settle-preview-row">
+            <div class="spv-main">
+              <div class="spv-title">${escapeHtml(e.desc || '(지출 내용 없음)')}</div>
+              <div class="spv-desc">${escapeHtml(e.itemTitle)}</div>
+            </div>
+            <div class="spv-amount">${fmtMoney(e.amount, e.currency)}${krwLine}</div>
+          </div>`;
+        }).join('');
   }
 
   function exportExcel(){
@@ -2037,37 +2200,63 @@
       alert('엑셀 기능을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해주세요.');
       return;
     }
-    const rows = state.items
-      .filter(it => it.amount)
-      .slice()
-      .sort((a,b) => {
-        if((a.date||'') !== (b.date||'')) return (a.date||'').localeCompare(b.date||'');
-        return (a.order||0) - (b.order||0);
-      })
-      .map(it => {
-        const dg = it.date ? dayGroupLabel(it.date) : { dayNum: null };
-        return {
-          '날짜': it.date || '',
-          'DAY': dg.dayNum ? `DAY ${dg.dayNum}` : '',
-          '카테고리': (CAT_META[it.category]||{}).label || '',
-          '장소/제목': it.title || '',
-          '금액': Number(it.amount) || 0,
-          '통화': it.currency || 'KRW'
-        };
-      });
-    if(rows.length === 0){
-      alert('내보낼 지출 내역이 없어요. 일정에 금액을 먼저 입력해주세요.');
+    const list = flattenExpenses();
+    if(list.length === 0){
+      alert('내보낼 지출 내역이 없어요. 일정에 지출을 먼저 입력해주세요.');
       return;
     }
+    const rows = list.map(e => {
+      const dg = e.itemDate ? dayGroupLabel(e.itemDate) : { dayNum: null };
+      return {
+        '날짜': e.itemDate || '',
+        'DAY': dg.dayNum ? `DAY ${dg.dayNum}` : '',
+        '카테고리': (CAT_META[e.itemCategory]||{}).label || '',
+        '일정 제목': e.itemTitle,
+        '지출 내용': e.desc,
+        '금액': e.amount,
+        '통화': e.currency,
+        '원화 환산(1698원 기준)': e.krw
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:26},{wch:12},{wch:8}];
+    ws['!cols'] = [{wch:12},{wch:8},{wch:10},{wch:22},{wch:22},{wch:12},{wch:8},{wch:16}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '지출내역');
     const fname = `여행경비_${state.tripStart||'start'}_${state.tripEnd||'end'}.xlsx`;
     XLSX.writeFile(wb, fname);
   }
 
+  const rateUSDInput = document.getElementById('rateUSD');
+  const rateEURInput = document.getElementById('rateEUR');
+  rateUSDInput.addEventListener('input', ()=>{
+    state.exchangeRates.USD = Number(rateUSDInput.value) || 0;
+    save();
+    renderSettlement();
+  });
+  rateEURInput.addEventListener('input', ()=>{
+    state.exchangeRates.EUR = Number(rateEURInput.value) || 0;
+    save();
+    renderSettlement();
+  });
+
+  function makeToggle(btnId, detailId){
+    const btn = document.getElementById(btnId);
+    const detail = document.getElementById(detailId);
+    btn.addEventListener('click', ()=>{
+      const isOpen = detail.style.display !== 'none';
+      detail.style.display = isOpen ? 'none' : 'block';
+      btn.classList.toggle('open', !isOpen);
+    });
+    return { btn, detail, close(){ detail.style.display = 'none'; btn.classList.remove('open'); } };
+  }
+  const categoryToggle = makeToggle('toggleCategoryBtn', 'categoryDetail');
+  const dayToggle = makeToggle('toggleDayBtn', 'dayDetail');
+
   document.getElementById('openSettlementBtn').addEventListener('click', ()=>{
+    rateUSDInput.value = state.exchangeRates.USD;
+    rateEURInput.value = state.exchangeRates.EUR;
+    categoryToggle.close();
+    dayToggle.close();
     renderSettlement();
     mainWrap.style.display = 'none';
     settlementWrap.style.display = 'block';
