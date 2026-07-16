@@ -42,7 +42,15 @@
   .wrap{
     max-width:760px;
     margin:0 auto;
-    padding: clamp(14px,3vw,28px) clamp(14px,4vw,28px) 80px;
+    padding: 0 clamp(14px,4vw,28px) 80px;
+  }
+  .sticky-top{
+    position:sticky;
+    top:0;
+    z-index:30;
+    background:var(--bg);
+    padding-top: clamp(14px,3vw,28px);
+    padding-bottom:0.4em;
   }
 
   .icon-svg{
@@ -631,30 +639,32 @@
 <body>
 
 <div class="wrap">
-  <header>
-    <div class="title-row">
-      <h1>일정</h1>
-    </div>
-    <div class="meta-row">
-      <button class="period-trigger" id="openPeriodBtn">
-        <span class="date-display placeholder" id="periodRangeDisplay">여행 기간 설정</span>
-      </button>
-      <span class="days-badge" id="daysBadge" style="display:none;"></span>
-      <div class="spacer"></div>
-      <button class="header-btn" id="openChecklistBtn"><span class="icon-svg" data-icon="checklist"></span>체크</button>
-      <button class="header-btn" id="openStorageBtn"><span class="icon-svg" data-icon="folder"></span>보관함</button>
-      <button class="header-btn" id="openDriveBtn"><span class="icon-svg" data-icon="cloud"></span>드라이브</button>
-    </div>
-  </header>
+  <div class="sticky-top">
+    <header>
+      <div class="title-row">
+        <h1>일정</h1>
+      </div>
+      <div class="meta-row">
+        <button class="period-trigger" id="openPeriodBtn">
+          <span class="date-display placeholder" id="periodRangeDisplay">여행 기간 설정</span>
+        </button>
+        <span class="days-badge" id="daysBadge" style="display:none;"></span>
+        <div class="spacer"></div>
+        <button class="header-btn" id="openChecklistBtn"><span class="icon-svg" data-icon="checklist"></span>체크</button>
+        <button class="header-btn" id="openStorageBtn"><span class="icon-svg" data-icon="folder"></span>보관함</button>
+        <button class="header-btn" id="openDriveBtn"><span class="icon-svg" data-icon="cloud"></span>드라이브</button>
+      </div>
+    </header>
 
-  <div class="day-tabs" id="dayTabs"></div>
+    <div class="day-tabs" id="dayTabs"></div>
 
-  <div class="cat-row" id="catRow">
-    <button class="cat-btn active" data-cat="all" title="전체"><span class="icon-svg" data-icon="grid"></span></button>
-    <button class="cat-btn" data-cat="place" title="장소"><span class="icon-svg" data-icon="pin"></span></button>
-    <button class="cat-btn" data-cat="move" title="이동"><span class="icon-svg" data-icon="car"></span></button>
-    <button class="cat-btn" data-cat="meal" title="식사"><span class="icon-svg" data-icon="utensils"></span></button>
-    <button class="cat-btn" data-cat="hotel" title="호텔"><span class="icon-svg" data-icon="bed"></span></button>
+    <div class="cat-row" id="catRow">
+      <button class="cat-btn active" data-cat="all" title="전체"><span class="icon-svg" data-icon="grid"></span></button>
+      <button class="cat-btn" data-cat="place" title="장소"><span class="icon-svg" data-icon="pin"></span></button>
+      <button class="cat-btn" data-cat="move" title="이동"><span class="icon-svg" data-icon="car"></span></button>
+      <button class="cat-btn" data-cat="meal" title="식사"><span class="icon-svg" data-icon="utensils"></span></button>
+      <button class="cat-btn" data-cat="hotel" title="호텔"><span class="icon-svg" data-icon="bed"></span></button>
+    </div>
   </div>
 
   <div class="card-list" id="cardList"></div>
