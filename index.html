@@ -282,6 +282,7 @@
   }
 
   .card-box{
+    position:relative;
     display:flex;
     flex-direction:column;
     background:var(--card);
@@ -290,6 +291,30 @@
     border:1px solid var(--line);
     padding:1em 1.1em;
   }
+  .done-btn{
+    position:absolute;
+    top:0.7em;
+    right:0.8em;
+    width:1.5em;
+    height:1.5em;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    padding:0;
+  }
+  .done-btn:hover{ border-color:#2F80ED; }
+  .done-btn.done{
+    background:#2F80ED;
+    border-color:#2F80ED;
+    color:#fff;
+  }
+  .card.done .card-box{ opacity:0.6; }
+  .card.done .card-head h3{ text-decoration:line-through; }
   .card-time{
     font-size:0.8em;
     font-weight:600;
@@ -303,6 +328,7 @@
     align-items:flex-start;
     gap:0.6em;
     margin-bottom:0.3em;
+    padding-right:2em;
   }
   .card-head h3{
     flex:1;
@@ -1214,7 +1240,8 @@
     grid:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
     money:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 3-1.5c1.5 0 3 .8 3 2s-1.5 2-3 2-3 .8-3 2 1.5 2 3 2a3 3 0 0 0 3-1.5"/><line x1="12" y1="6" x2="12" y2="18"/></svg>',
     back:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
-    download:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 19h14"/></svg>'
+    download:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 19h14"/></svg>',
+    checkCircle:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>'
   };
   function injectIcons(){
     document.querySelectorAll('.icon-svg[data-icon]').forEach(el=>{
@@ -1292,8 +1319,9 @@
       : `<button class="link-row file-pick-btn" data-id="${it.id}" title="파일찾기"><span class="icon-svg">${ICON_SVGS.paperclip}</span></button>`;
     const memoContent = renderMemo(it.memo);
     return `
-    <div class="card ${it.category}" data-id="${it.id}">
+    <div class="card ${it.category}${it.done ? ' done' : ''}" data-id="${it.id}">
       <div class="card-box">
+        <button class="done-btn${it.done ? ' done' : ''}" data-id="${it.id}" title="완료 체크"><span class="icon-svg">${ICON_SVGS.checkCircle}</span></button>
         <div class="card-time">${escapeHtml(timeLabel)}</div>
         <div class="card-head">
           <h3><span class="icon-svg cat-icon">${ICON_SVGS[meta.icon]}</span>${escapeHtml(it.title || '(제목 없음)')}</h3>
@@ -1385,6 +1413,15 @@
     });
     list.querySelectorAll('.drag-handle').forEach(h=>{
       h.addEventListener('pointerdown', onDragHandleDown);
+    });
+    list.querySelectorAll('.done-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const item = state.items.find(it=>it.id===b.dataset.id);
+        if(!item) return;
+        item.done = !item.done;
+        save();
+        renderCards();
+      });
     });
   }
 
