@@ -570,25 +570,74 @@
     background:var(--teal); color:#fff; border:none;
     border-radius:10px; padding:0 1em; font-weight:700; cursor:pointer;
   }
-  .checklist-list{ display:flex; flex-direction:column; gap:0.4em; max-height:50vh; overflow-y:auto; }
+  #checklistCategoryList{ max-height:60vh; overflow-y:auto; }
+  .cl-cat-block{
+    border-bottom:1px solid var(--line);
+  }
+  .cl-cat-block:last-child{ border-bottom:none; }
+  .cl-cat-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .cl-cat-toggle{
+    flex:1;
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:0.45em;
+    background:none;
+    border:none;
+    padding:0.6em 0.1em;
+    cursor:pointer;
+    text-align:left;
+    font-family:inherit;
+  }
+  .cl-cat-toggle .chev{
+    flex:0 0 auto;
+    color:var(--ink-soft);
+    font-size:0.75em;
+    transition:transform .15s ease;
+  }
+  .cl-cat-toggle .chev.open{ transform:rotate(180deg); }
+  .cl-cat-name{ flex:1; min-width:0; font-size:0.88em; font-weight:700; color:var(--ink); word-break:break-word; }
+  .cl-cat-count{ flex:0 0 auto; font-size:0.74em; color:var(--ink-soft); font-weight:600; }
+  .cl-cat-del{
+    flex:0 0 auto;
+    background:none; border:none; color:var(--ink-soft);
+    cursor:pointer; padding:0.4em 0.2em; font-size:0.85em;
+  }
+  .cl-cat-del:hover{ color:#B3402F; }
+  .cl-cat-body{ padding:0 0.1em 0.7em 1.3em; }
+  .cl-item-add-row{ display:flex; gap:0.4em; margin-top:0.4em; }
+  .cl-item-add-row input{
+    flex:1; min-width:0; font-size:0.85em;
+    padding:0.4em 0; border:none; border-bottom:1px solid var(--line);
+    border-radius:0; background:none;
+  }
+  .cl-item-add-row input:focus{ outline:none; border-bottom-color:var(--teal); }
+  .cl-item-add-row button{
+    flex:0 0 auto;
+    background:none; color:var(--teal); border:none;
+    font-weight:700; cursor:pointer; font-size:0.85em; padding:0.3em 0.2em;
+  }
+  .checklist-list{ display:flex; flex-direction:column; }
   .checklist-row{
-    display:flex; align-items:center; gap:0.6em;
-    padding:0.6em 0.7em;
-    border:1px solid var(--line);
-    border-radius:10px;
-    background:#fbfbf9;
+    display:flex; align-items:center; gap:0.55em;
+    padding:0.4em 0;
   }
   .checklist-row input[type=checkbox]{
-    width:1.2em; height:1.2em; flex:0 0 auto; accent-color:var(--teal); cursor:pointer;
+    width:1.05em; height:1.05em; flex:0 0 auto; accent-color:var(--teal); cursor:pointer;
   }
-  .checklist-row .ct-text{ flex:1; min-width:0; font-size:0.92em; word-break:break-word; }
+  .checklist-row .ct-text{ flex:1; min-width:0; font-size:0.88em; word-break:break-word; cursor:text; }
+  .checklist-row .ct-text-edit{ flex:1; min-width:0; font-size:0.88em; padding:0.2em 0; border:none; border-bottom:1px solid var(--teal); border-radius:0; background:none; }
   .checklist-row.done .ct-text{ text-decoration:line-through; color:var(--ink-soft); }
   .checklist-row .ct-del{
     flex:0 0 auto; border:none; background:transparent; color:var(--ink-soft);
-    cursor:pointer; font-size:1em; padding:0.2em;
+    cursor:pointer; font-size:0.9em; padding:0.2em; opacity:0.6;
   }
-  .checklist-row .ct-del:hover{ color:#B3402F; }
-  .checklist-empty{ text-align:center; color:var(--ink-soft); font-size:0.85em; padding:2em 1em; }
+  .checklist-row .ct-del:hover{ opacity:1; color:#B3402F; }
+  .checklist-empty{ text-align:left; color:var(--ink-soft); font-size:0.82em; padding:0.3em 0; }
 
   /* ---------- Settlement summary ---------- */
   .view-header{
@@ -923,10 +972,10 @@
   <div class="modal">
     <h2>✅ 여행 준비물 체크리스트</h2>
     <div class="checklist-add-row">
-      <input type="text" id="checklistInput" placeholder="예: 여권, 충전기, 우산">
-      <button id="checklistAddBtn">추가</button>
+      <input type="text" id="categoryNameInput" placeholder="새 카테고리 (예: 전자기기, 의류)">
+      <button id="categoryAddBtn">추가</button>
     </div>
-    <div class="checklist-list" id="checklistList"></div>
+    <div id="checklistCategoryList"></div>
     <div class="modal-actions">
       <button class="btn ghost" id="checklistCloseBtn">닫기</button>
     </div>
@@ -1086,6 +1135,7 @@
     if(!s.files) s.files = [];
     if(!s.folders) s.folders = [];
     if(!s.exchangeRates) s.exchangeRates = { USD: 1500, EUR: 1700 };
+    if(!s.checklistCategories) s.checklistCategories = [];
     (s.items||[]).forEach(it=>{
       if(!it.expenses){
         it.expenses = it.amount
@@ -1682,53 +1732,155 @@
     renderAll();
   });
 
-  // ---------- Checklist ----------
+  // ---------- Checklist (with categories) ----------
   const checklistOverlay = document.getElementById('checklistOverlay');
-  const checklistInput = document.getElementById('checklistInput');
-  const checklistList = document.getElementById('checklistList');
+  const categoryNameInput = document.getElementById('categoryNameInput');
+  const checklistCategoryList = document.getElementById('checklistCategoryList');
+  let openCategories = new Set();
 
-  function renderChecklist(){
-    if(state.checklist.length === 0){
-      checklistList.innerHTML = `<div class="checklist-empty">아직 등록된 준비물이 없어요. 위에서 추가해보세요.</div>`;
+  function renderChecklistCategories(){
+    const cats = state.checklistCategories.slice();
+    const hasUnclassified = state.checklist.some(it => !it.categoryId);
+    const allCats = hasUnclassified ? [...cats, { id:'__none__', name:'미분류', virtual:true }] : cats;
+
+    if(allCats.length === 0){
+      checklistCategoryList.innerHTML = `<div class="checklist-empty">카테고리를 추가해서 체크리스트를 만들어보세요.</div>`;
       return;
     }
-    checklistList.innerHTML = state.checklist.map(ct => `
-      <div class="checklist-row ${ct.done ? 'done' : ''}" data-id="${ct.id}">
-        <input type="checkbox" class="ct-check" ${ct.done ? 'checked' : ''}>
-        <div class="ct-text">${escapeHtml(ct.text)}</div>
-        <button class="ct-del" title="삭제">🗑️</button>
-      </div>`).join('');
 
-    checklistList.querySelectorAll('.ct-check').forEach(cb=>{
-      cb.addEventListener('change', (e)=>{
-        const id = e.target.closest('.checklist-row').dataset.id;
-        const item = state.checklist.find(c=>c.id===id);
-        if(item){ item.done = e.target.checked; save(); renderChecklist(); }
+    checklistCategoryList.innerHTML = allCats.map(cat => {
+      const items = state.checklist.filter(it => (it.categoryId || '__none__') === cat.id);
+      const doneCount = items.filter(it => it.done).length;
+      const isOpen = openCategories.has(cat.id);
+      return `
+      <div class="cl-cat-block">
+        <div class="cl-cat-header">
+          <button class="cl-cat-toggle" data-id="${cat.id}">
+            <span class="chev ${isOpen ? 'open' : ''}">▾</span>
+            <span class="cl-cat-name">${escapeHtml(cat.name)}</span>
+            <span class="cl-cat-count">${doneCount}/${items.length}</span>
+          </button>
+          ${cat.virtual ? '' : `<button class="cl-cat-del" data-id="${cat.id}" title="카테고리 삭제">🗑️</button>`}
+        </div>
+        <div class="cl-cat-body" style="display:${isOpen ? 'block' : 'none'};">
+          <div class="checklist-list">
+            ${items.length === 0
+              ? `<div class="checklist-empty">아직 항목이 없어요.</div>`
+              : items.map(it => `
+                <div class="checklist-row ${it.done ? 'done' : ''}" data-id="${it.id}">
+                  <input type="checkbox" class="ct-check" ${it.done ? 'checked' : ''}>
+                  <div class="ct-text" data-id="${it.id}">${escapeHtml(it.text)}</div>
+                  <button class="ct-del" title="삭제">🗑️</button>
+                </div>`).join('')}
+          </div>
+          <div class="cl-item-add-row">
+            <input type="text" class="cl-item-input" data-cat="${cat.id}" placeholder="항목 추가 (예: 여권, 충전기)">
+            <button class="cl-item-add-btn" data-cat="${cat.id}">추가</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    checklistCategoryList.querySelectorAll('.cl-cat-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        if(openCategories.has(id)) openCategories.delete(id); else openCategories.add(id);
+        renderChecklistCategories();
       });
     });
-    checklistList.querySelectorAll('.ct-del').forEach(btn=>{
-      btn.addEventListener('click', (e)=>{
+    checklistCategoryList.querySelectorAll('.cl-cat-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const cat = state.checklistCategories.find(c => c.id === id);
+        if(!cat) return;
+        if(!confirm(`'${cat.name}' 카테고리를 삭제할까요? 안의 항목은 삭제되지 않고 '미분류'로 이동해요.`)) return;
+        state.checklist.forEach(it => { if(it.categoryId === id) it.categoryId = null; });
+        state.checklistCategories = state.checklistCategories.filter(c => c.id !== id);
+        openCategories.delete(id);
+        save();
+        renderChecklistCategories();
+      });
+    });
+    checklistCategoryList.querySelectorAll('.cl-item-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => addChecklistItem(btn.dataset.cat));
+    });
+    checklistCategoryList.querySelectorAll('.cl-item-input').forEach(input => {
+      input.addEventListener('keydown', (e) => { if(e.key === 'Enter') addChecklistItem(input.dataset.cat); });
+    });
+    checklistCategoryList.querySelectorAll('.ct-check').forEach(cb => {
+      cb.addEventListener('change', (e) => {
         const id = e.target.closest('.checklist-row').dataset.id;
-        state.checklist = state.checklist.filter(c=>c.id!==id);
-        save(); renderChecklist();
+        const item = state.checklist.find(c => c.id === id);
+        if(item){ item.done = e.target.checked; save(); renderChecklistCategories(); }
+      });
+    });
+    checklistCategoryList.querySelectorAll('.ct-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.closest('.checklist-row').dataset.id;
+        state.checklist = state.checklist.filter(c => c.id !== id);
+        save();
+        renderChecklistCategories();
+      });
+    });
+    checklistCategoryList.querySelectorAll('.ct-text').forEach(div => {
+      div.addEventListener('click', () => {
+        const id = div.dataset.id;
+        const item = state.checklist.find(c => c.id === id);
+        if(!item) return;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ct-text-edit';
+        input.value = item.text;
+        div.replaceWith(input);
+        input.focus();
+        input.select();
+        const commit = () => {
+          const v = input.value.trim();
+          if(v) item.text = v;
+          save();
+          renderChecklistCategories();
+        };
+        input.addEventListener('keydown', (e) => {
+          if(e.key === 'Enter') commit();
+          if(e.key === 'Escape') renderChecklistCategories();
+        });
+        input.addEventListener('blur', commit);
       });
     });
   }
 
-  function addChecklistItem(){
-    const text = checklistInput.value.trim();
+  function addChecklistItem(categoryId){
+    const input = checklistCategoryList.querySelector(`.cl-item-input[data-cat="${categoryId}"]`);
+    if(!input) return;
+    const text = input.value.trim();
     if(!text) return;
-    state.checklist.push({ id:'ck_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text, done:false });
-    checklistInput.value = '';
+    state.checklist.push({
+      id:'ck_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      text,
+      done:false,
+      categoryId: categoryId === '__none__' ? null : categoryId
+    });
+    openCategories.add(categoryId);
     save();
-    renderChecklist();
-    checklistInput.focus();
+    renderChecklistCategories();
   }
-  document.getElementById('checklistAddBtn').addEventListener('click', addChecklistItem);
-  checklistInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') addChecklistItem(); });
+
+  function addCategory(){
+    const name = categoryNameInput.value.trim();
+    if(!name) return;
+    const id = 'clcat_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    state.checklistCategories.push({ id, name });
+    openCategories.add(id);
+    categoryNameInput.value = '';
+    save();
+    renderChecklistCategories();
+  }
+  document.getElementById('categoryAddBtn').addEventListener('click', addCategory);
+  categoryNameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addCategory(); });
 
   document.getElementById('openChecklistBtn').addEventListener('click', ()=>{
-    renderChecklist();
+    renderChecklistCategories();
     checklistOverlay.classList.add('open');
   });
   document.getElementById('checklistCloseBtn').addEventListener('click', ()=> checklistOverlay.classList.remove('open'));
@@ -2121,6 +2273,8 @@
       if(!state.checklist) state.checklist = [];
       if(!state.files) state.files = [];
       if(!state.folders) state.folders = [];
+      if(!state.exchangeRates) state.exchangeRates = { USD: 1500, EUR: 1700 };
+      if(!state.checklistCategories) state.checklistCategories = [];
       save();
       tripStartEl.value = state.tripStart || '';
       tripEndEl.value = state.tripEnd || '';
